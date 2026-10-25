@@ -5,6 +5,10 @@ artwork is entirely native filled contours. The internal controls remain editabl
 but do not appear as skeleton strokes in exports. Existing stick figures keep
 their current appearance; this is an explicit authoring choice.
 
+For coherent front/side/back views, independent head turns and orbital perspective,
+use `dimension:'3d'`: see [Spatial characters](SPATIAL-CHARACTERS.md). The default
+`dimension:'2d'` remains a planar artwork preset.
+
 ```js
 const {uid,rig}=editor.addCartoonCharacter({
   name:'Aziz', position:{x:420,y:300}, expression:'happy',
@@ -27,6 +31,7 @@ without a second skeleton or a special render path. Appearance options are:
 - `expression`: `happy`, `neutral` or `sad` at creation.
 - `palette`: hex/RGB colors for `skin`, `shirt`, `pants`, `shoes`, `hair`, `iris`.
 - `name`, and an optional scene `position:{x,y}` through the editor method.
+- `dimension`: `2d` or `3d`.
 
 Imported assets use the normal figure/range planner, saving and one undo command.
 All contours and their handles remain native editable geometry. Automatic rig
@@ -38,10 +43,14 @@ hidden, preserving invisibility through native visibility normalization on save.
 This is a stylized planar asset preset, not a general character design or skinning
 system. It is designed for joint rotation and fixed-length IK. Stretching,
 bending, re-rooting or changing bone proportions may require editing the artwork
-too. It does not add facial animation, 3D turning, imported SVG retargeting or
+too. The planar preset does not add facial animation, 3D turning, imported SVG retargeting or
 automatic conversion of an existing character. Size and whole-figure rotation
 use the existing figure transform tools. A fresh character has 691 native controls
 and 31 visible filled contours; normal pose preparation budgets still apply.
+
+Planar shoes now cover the rounded trouser ends and use an explicit sole offset
+for grounding; source `groundY` refers to the sole surface. See the spatial
+character guide for the matching 3D foot attachment and view controls.
 
 ## Filled UI-style artwork
 

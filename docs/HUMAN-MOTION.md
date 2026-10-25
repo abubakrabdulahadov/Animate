@@ -19,7 +19,8 @@ The agent tools are `editor_getHumanRig`, `editor_previewHumanMotion` and
 `editor_applyHumanMotion`. `node scripts/agent.mjs --tools human` exposes their
 schemas. The last method is asynchronous; JSON batch jobs and persistent tool
 sessions await it. SIGINT/SIGTERM in a session propagate to preparation.
-See [the example job](../examples/agent-human-motion.json).
+See [the example job](../examples/agent-human-motion.json). Built-in 3D cartoon
+characters also use this API through the [spatial adapter](SPATIAL-CHARACTERS.md).
 
 ## Movement
 
@@ -50,7 +51,7 @@ The implementation uses StykAnimate's existing solver and native pose semantics.
 | `duration` | Number of output ticks, 2–2400; default is approximately two seconds at the document FPS. |
 | `distance` | Signed scene-pixel travel for `walk`; default is twice the shorter leg's reach. Other actions use zero. |
 | `stepLength` | Scene-pixel stride spacing, 12%–55% of the shorter leg length; default 48%. |
-| `groundY` | World-space floor height; default is the lower initial ankle. An explicit height places the character on that floor. |
+| `groundY` | World-space floor height; default is the lower sole height (the ankle for ordinary stick rigs). An explicit height places the character on that floor. |
 | `intensity` | 0–1.5, default 1; secondary motion strength. |
 | `blend` | Seconds of soft entrance/settling, 0–2; default 0.25. Walk contacts are not marked planted during the initial pose transition. |
 | `hand` | `left` or `right` for wave/reach, default `right`; refers to rig roles. |
@@ -59,6 +60,7 @@ The implementation uses StykAnimate's existing solver and native pose semantics.
 | `rig` | Optional explicit native handle mapping below. |
 | `carry` | `{hand:'left'\|'right'\|'both', forward?, height?}` keeps a carrying grip during walk/idle; fractions default to .45/.32 of arm reach. |
 | `cloth` | Cloth motion settings, or `false` to keep attached cloth rigid; see [Cloth motion](CLOTH-MOTION.md). |
+| `view`, `viewTo` | Spatial cartoon character body/head and orbital view endpoints; see [Spatial characters](SPATIAL-CHARACTERS.md). |
 
 `action:'carry'` provides a carrying pose, optionally with `distance` for walking.
 It also accepts `hand:'both'`. Carrying selects the lower elbow solution, so the
@@ -75,6 +77,11 @@ per complete stride; increase duration for a longer distance. Preview returns th
 pose, foot contacts, target errors, normalized phase and transition weight without
 modifying the document. Planted contact points are constraints; reach targets can
 have a reported residual when unreachable.
+
+For generated cartoon artwork, contact `point` is the sole and `ankle` is the
+joint, so shoe thickness does not sink below or float above the intended ground.
+Ordinary stick rigs have zero sole offset. Spatial cartoon characters reuse this
+sampler through a native spatial adapter; other spatial rigs remain unsupported.
 
 ## Anatomy and compatibility
 
@@ -103,7 +110,7 @@ lengths are respected. Managed IK controllers remain enabled but become unpinned
 in generated poses so normal pose evaluation reproduces the baked result; target
 positions and bend continuity are refreshed for later manual posing.
 
-This version rejects joined figures, static main bones, spatial/connector rigs,
+The planar sampler rejects joined figures, static main bones, other spatial/connector rigs,
 re-rooted animation origins and extra pinned controllers. It does not retarget
 3D rigs. Explicit legacy figure X/Y/rotation channels must be baked or removed
 before generating pose motion. Locked layers and unfinished native working-frame

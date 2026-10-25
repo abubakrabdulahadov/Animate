@@ -1,0 +1,10 @@
+{
+  "version":1,
+  "name":"Spatial character orbit",
+  "commands":[
+    {"op":"project","width":960,"height":640,"fps":24},
+    {"op":"call","method":"addCartoonCharacter","args":[{"dimension":"3d","position":{"x":400,"y":350}}]},
+    {"op":"call","method":"applyHumanMotion","args":[{"action":"walk","duration":120,"distance":150,"groundY":530,"view":{"yaw":1.5707963267948966,"headYaw":0,"perspective":0.5,"distance":700},"viewTo":{"orbitYaw":2.4,"orbitPitch":0.2,"headYaw":-0.3}}]}
+  ],
+  "output":"agent-spatial-character.styk"
+}

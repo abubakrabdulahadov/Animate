@@ -1,4 +1,5 @@
 import {createClothDeformer} from './cloth-motion.mjs';
+import {isSpatialCharacter,characterRig,spatialHumanMotion} from './spatial-character.mjs';
 import {buildGeometry} from './pivot/geometry.mjs';
 import {createFrame} from './demo.mjs';
 import {ikLayout,ikChain,ikBendReference,solveIKPoints} from './ik.mjs';
@@ -17,6 +18,9 @@ const finite=(value,label,min=-Infinity,max=Infinity)=>{
 
 /** Optional anatomy over ordinary native IDs; never inferred from record indexes. */
 export function humanRig(figure,mapping) {
+  if(isSpatialCharacter(figure)){
+    const rig=characterRig(figure);if(mapping&&(Object.keys(mapping).some(k=>!Object.hasOwn(rig,k))||Object.keys(rig).some(k=>JSON.stringify(mapping[k])!==JSON.stringify(rig[k]))))throw new Error('Use the spatial character’s own anatomy mapping.');return rig;
+  }
   const segments=figure.segments,ids=new Map(segments.map((s,i)=>[s.segment_id,i]));
   const children=id=>segments.filter(s=>s.parent_id===id);
   const line=s=>s&&s.segment_type==='line'&&![1,2,3,4,5].includes(s.primitive_code);
@@ -88,6 +92,12 @@ export function motionOptions(options,legLength,fps) {
 
 /** Build one small, immutable sampling context; no document or renderer caches. */
 export function createHumanMotion(figure,object,options={},fps=24) {
+  if(isSpatialCharacter(figure)){
+    humanRig(figure,options.rig);
+    const duration=options.duration??Math.round(fps*2);
+    if(duration*figure.segments.length>HUMAN_MOTION_LIMITS.boneSamples||JSON.stringify(object).length*2*duration>HUMAN_MOTION_LIMITS.poseBytes)throw new RangeError('Generate a shorter spatial motion for this character.');
+    return spatialHumanMotion(figure,object,options,fps,createHumanMotion);
+  }
   if(object.join||!Number.isFinite(object.scale)||object.scale<=0)throw new Error('Select an independent, positively scaled humanoid.');
   const rig=humanRig(figure,options.rig),layout=ikLayout(figure),scale=object.scale;
   const frame=createFrame([{...object,object_slot:0}]);
@@ -105,10 +115,11 @@ export function createHumanMotion(figure,object,options={},fps=24) {
   if(JSON.stringify(object).length*2*settings.duration>HUMAN_MOTION_LIMITS.poseBytes)throw new RangeError('Generate a shorter motion for this pose’s metadata size.');
   const managed=new Set(['leftArm','rightArm','leftLeg','rightLeg'].map(role=>rig[role][1]));
   if(Object.entries(object._stykIK??{}).some(([id,c])=>c.enabled&&c.pinned&&!managed.has(Number(id))))throw new Error('Unpin additional IK controllers before generating human motion.');
-  const baseGround=Math.max(point(rig.leftLeg[1]).y,point(rig.rightLeg[1]).y);
+  const sole=finite(figure._styk?.footSole??0,'foot sole offset',0,100)*scale;
+  const baseGround=Math.max(point(rig.leftLeg[1]).y,point(rig.rightLeg[1]).y)+sole;
   verticalOffset=(settings.groundY??baseGround)-baseGround;
   const root={...geometry.root,y:geometry.root.y+verticalOffset},restFeet={left:{...point(rig.leftLeg[1])},right:{...point(rig.rightLeg[1])}};
-  const ground=settings.groundY??baseGround,direction=Math.sign(settings.distance)||1;
+  const ground=(settings.groundY??baseGround)-sole,direction=Math.sign(settings.distance)||1;
   const durationSeconds=(settings.duration-1)/fps,front=direction*(restFeet.left.x-restFeet.right.x)>=0?'left':'right';
   const rest=snapshotPoseObject(object);rest.angles=angles.slice();
   // Solver lengths are world-space; native pose lengths remain unscaled.
@@ -144,7 +155,7 @@ export function createHumanMotion(figure,object,options={},fps=24) {
         if(!stance)fx+=direction*2*step*ease(swing);
         fy=ground-legLength*.16*Math.sin(Math.PI*swing)**2*speedWeight*motion;
       }
-      feet[side]={x:fx,y:fy};contacts[side]={planted:!walking||stance&&entry>=.999999,point:{x:fx,y:fy}};
+      feet[side]={x:fx,y:fy};contacts[side]={planted:!walking||stance&&entry>=.999999,point:{x:fx,y:fy+sole},ankle:{x:fx,y:fy}};
     }
     // Lower the pelvis only when needed for a reachable, slightly flexed knee.
     for(const side of ['left','right']){
@@ -165,7 +176,7 @@ export function createHumanMotion(figure,object,options={},fps=24) {
     for(const side of ['left','right']){
       const chain=rig[`${side}Leg`],a=point(chain[0]),b=point(chain[1]),cross=(b.x-root.x)*(a.y-root.y)-(b.y-root.y)*(a.x-root.x);
       solve(`${side}Leg`,feet[side],walking?-direction:Math.sign(cross)||-1);
-      if(rig[`${side}Foot`]!==undefined){const id=rig[`${side}Foot`];owned.set(id,walking?angleMix(angles[index(id)],direction>0?0:Math.PI,entry):angles[index(id)]);}
+      if(rig[`${side}Foot`]!==undefined){const id=rig[`${side}Foot`];owned.set(id,walking?angleMix(angles[index(id)],sole?0:direction>0?0:Math.PI,entry):angles[index(id)]);}
     }
     for(const side of ['left','right']){
       const role=`${side}Arm`,upper=rig[role][0],lower=rig[role][1],shoulder=currentPoints().points.get(figure.segments[index(upper)].parent_id);
@@ -206,5 +217,5 @@ export function createHumanMotion(figure,object,options={},fps=24) {
     synchronizeAnimationOrigin(figure,draped);
     return {pose:draped,contacts,targets,grips,phase:cycle,weight};
   };
-  return {rig,settings,legLength,root,ground,sample};
+  return {rig,settings,legLength,root,ground:ground+sole,sample};
 }

@@ -1,4 +1,5 @@
 import {defaultFigure} from './demo.mjs';
+import {buildSpatialCartoon} from './spatial-character.mjs';
 
 const color=value=>{if(typeof value==='string'&&/^#[a-f\d]{6}$/i.test(value))value=[1,3,5].map(i=>parseInt(value.slice(i,i+2),16));if(!Array.isArray(value)||value.length!==3||value.some(v=>!Number.isInteger(v)||v<0||v>255))throw new Error('Choose a six-digit hex or RGB fill color.');return [...value];};
 const finite=(n,key,min,max)=>{if(!Number.isFinite(n)||n<min||n>max)throw new RangeError(`${key} must be between ${min} and ${max}.`);return n;};
@@ -49,10 +50,12 @@ export function createFilledShape(options={}) {
 
 /** A complete two-spine planar humanoid. All visible artwork is native fill. */
 export function createCartoonCharacter(options={}) {
-  keys(options,['name','palette','expression']);
+  keys(options,['name','palette','expression','dimension']);
   const palette=options.palette??{};keys(palette,['skin','shirt','pants','shoes','hair','iris']);
   const colors={skin:color(palette.skin??'#efc49c'),shirt:color(palette.shirt??'#68a6a0'),pants:color(palette.pants??'#405d81'),shoes:color(palette.shoes??'#26384e'),hair:color(palette.hair??'#554035'),iris:color(palette.iris??'#34505d')};
   const expression=options.expression??'happy';if(!['happy','neutral','sad'].includes(expression))throw new Error('Choose happy, neutral or sad.');
+  const dimension=options.dimension??'2d';if(!['2d','3d'].includes(dimension))throw new Error('Choose 2d or 3d character artwork.');
+  if(dimension==='3d')return buildSpatialCartoon({name:name(options.name,'Spatial cartoon character'),colors,expression});
   const figure=defaultFigure(1);figure.name=name(options.name,'Cartoon character');figure.polyfills=[];
   const specs=[
     [0,27,-Math.PI/2,'Lower spine'],[1,42,-Math.PI/2,'Chest'],[2,50,-Math.PI/2,'Head'],
@@ -72,9 +75,9 @@ export function createCartoonCharacter(options={}) {
     draw.fill(points,tint,z,handle);
   };
   // Far limbs precede the torso; same-color rounded ends cover the elbow/knee seams.
-  limb(10,27,colors.pants,1);limb(11,24,colors.pants,2);draw.ellipse(13,-8,-3,23,10,colors.shoes,3);
+  limb(10,27,colors.pants,1);limb(11,24,colors.pants,2);draw.ellipse(13,-8,3,23,12,colors.shoes,3);
   limb(6,23,colors.shirt,4);limb(7,19,colors.skin,5);draw.ellipse(7,0,0,11,12,colors.skin,6);
-  limb(8,29,colors.pants,7);limb(9,25,colors.pants,8);draw.ellipse(12,-8,-3,23,10,colors.shoes,9);
+  limb(8,29,colors.pants,7);limb(9,25,colors.pants,8);draw.ellipse(12,-8,3,23,12,colors.shoes,9);
   draw.fill(roundedBox(54,27,10).map(([x,y])=>[x,y+2]),colors.pants,10);
   // Upper vertices follow the chest; lower vertices follow the pelvis.
   draw.fill([
@@ -96,5 +99,6 @@ export function createCartoonCharacter(options={}) {
   if(expression==='happy'){draw.ellipse(3,1,41,9,4.8,'#874c44',28,24);draw.fill(roundedBox(12,2.2,1).map(([x,y])=>[x+1,y+38.2]),'#fff7e7',29,3);}
   else if(expression==='neutral')draw.fill(roundedBox(11,2.2,1).map(([x,y])=>[x+1,y+41]),'#874c44',28,3);
   else draw.fill([[-8,42],[-3,38],[4,38],[10,42],[8,43],[3,41],[-2,41],[-6,43]],'#874c44',28,3);
-  return {figure:draw.finish(),rig};
+  draw.finish();figure._styk.footSole=15;
+  return {figure,rig};
 }

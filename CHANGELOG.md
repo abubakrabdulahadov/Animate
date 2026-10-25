@@ -8,7 +8,7 @@ What's new in each version of StykAnimate.
 
 ### Added
 
-- Create full-color cartoon characters and rounded panels, buttons, badges and speech bubbles with editable filled shapes.
+- Create full-color 2D and 3D cartoon characters with body and head turning, plus rounded panels, buttons, badges and speech bubbles.
 - Create finely jointed scarves, capes and skirts with adjustable density and editable wind and draping motion.
 - Generate editable walking, breathing, waving, reaching and natural carrying motions for 2D characters.
 - Create shapes and animations with scripts or AI agents, save editable projects, and export previews or MP4/WebM videos with sound without opening the app.
@@ -29,6 +29,7 @@ What's new in each version of StykAnimate.
 
 ### Fixed
 
+- New cartoon characters keep their shoes at the feet and plant the soles when walking.
 - Fixed an error when deleting your last color palette.
 
 ## [1.2.5]

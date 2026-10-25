@@ -107,6 +107,10 @@ For a cartoon appearance, `editor_addCartoonCharacter` creates filled body parts
 clothes and facial details over hidden controls. `editor_addFilledShape` creates
 rounded panels, pills, ellipses, stars and speech bubbles. See [Filled artwork](docs/FILLED-ART.md).
 
+Use `dimension:'3d'` for characters with coherent front/side/back surfaces, separate
+head turns and depth-aware orbital shots. `setCharacterView` and human motion's
+`view`/`viewTo` expose these controls to agents. See [Spatial characters](docs/SPATIAL-CHARACTERS.md).
+
 ## Contributing
 
 Bug reports, ideas, translations and pull requests are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) first, and follow the [Code of Conduct](CODE_OF_CONDUCT.md). Report security problems privately as described in [SECURITY.md](SECURITY.md).

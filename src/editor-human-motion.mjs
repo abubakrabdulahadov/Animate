@@ -27,9 +27,9 @@ export function poseMotionContext(editor,options={},editing=false,humanoid=true)
   const figure=editor.report.figure_types.find(f=>f.figure_type_id===object.figure_type_id);
   // The worker needs bone geometry, not embedded artwork or an unrelated scene.
   const numericFigure={figure_type_id:figure.figure_type_id,name:figure.name,
-    segments:figure.segments.map(({segment_id,parent_id,length,angle_rad,bend_rad,primitive_code,aux_code,flags,segment_type,segment_kind,is_static,name,_stykRig,_stykCloth})=>
-      ({segment_id,parent_id,length,angle_rad,bend_rad,primitive_code,aux_code,flags,segment_type,segment_kind,is_static,name,_stykRig,_stykCloth,thickness:0,color_rgb:[0,0,0]})),
-    polyfills:[],image_assets:[],text_assets:[],_styk:figure._styk?.animationOrigin?{animationOrigin:figure._styk.animationOrigin}:undefined};
+    segments:figure.segments.map(({segment_id,parent_id,length,angle_rad,bend_rad,primitive_code,aux_code,flags,segment_type,segment_kind,is_static,name,_stykRig,_stykCloth,_stykCharacterRole})=>
+      ({segment_id,parent_id,length,angle_rad,bend_rad,primitive_code,aux_code,flags,segment_type,segment_kind,is_static,name,_stykRig,_stykCloth,_stykCharacterRole,thickness:0,color_rgb:[0,0,0]})),
+    polyfills:[],image_assets:[],text_assets:[],_styk:{...(figure._styk?.animationOrigin?{animationOrigin:figure._styk.animationOrigin}:{}),...(figure._styk?.footSole!==undefined?{footSole:figure._styk.footSole}:{}),...(figure._styk?.spatialCartoon?{spatialCartoon:figure._styk.spatialCartoon}:{})}};
   const pose=snapshotPoseObject(object);pose.object_slot=0;
   for(const [flag,vector,field]of [['len_flag','lengths','length'],['bend_flag','bends','bend_rad']])if(!pose[flag]&&object.runtime_segments?.some((s,i)=>s[field]!==undefined&&s[field]!==figure.segments[i][field])){
     pose[flag]=1;pose[vector]=figure.segments.map((s,i)=>object.runtime_segments[i]?.[field]??s[field]??0);
