@@ -1,0 +1,141 @@
+# Human motion
+
+The native `Editor` can generate coordinated walking, breathing, waving and
+reaching for an ordinary planar humanoid. It writes editable pose keys using the
+existing document, IK solver and command history. It is available through the
+engine and agent API; there is no new toolbar or automatic alteration of existing
+animation.
+
+```js
+editor.select(uid);
+const rig = editor.getHumanRig();
+const preview = editor.previewHumanMotion({action:'walk', duration:120}, 30);
+const controller = new AbortController();
+await editor.applyHumanMotion({
+  action:'walk', start:0, duration:120, distance:260
+}, {signal:controller.signal});
+```
+
+The agent tools are `editor_getHumanRig`, `editor_previewHumanMotion` and
+`editor_applyHumanMotion`. `node scripts/agent.mjs --tools human` exposes their
+schemas. The last method is asynchronous; JSON batch jobs and persistent tool
+sessions await it. SIGINT/SIGTERM in a session propagate to preparation.
+See [the example job](../examples/agent-human-motion.json).
+
+## Movement
+
+- Walking advances the pelvis with smooth acceleration and deceleration. The
+  gait follows distance traveled rather than an independent animation clock.
+  During stance the ankle stays at its world-space plant location; during swing
+  it follows a smooth forward arc with clearance above the ground.
+- The shared analytic two-link IK solver poses the legs. It preserves effective
+  bone lengths; the pelvis lowers if needed to retain reach and avoid fully
+  straight knees. Extra artwork inherits its parent bone's angle change.
+- Arms counter the stepping leg, with delayed swing and flexed elbows. Spine
+  segments use offset phases, and the head compensates for torso inclination.
+- Idle poses keep the feet fixed while shifting weight and breathing gently.
+  Waves ease into a raised arm, wave beside the head, then settle. Reaches arc
+  toward a target with a small torso lean and pelvic counterbalance.
+
+This is deterministic stylized animation, not motion capture or a biomechanical
+simulation. A useful reference for the footplant problem is
+[Kovar, Schreiner and Gleicher, *Footskate Cleanup*](https://research.cs.wisc.edu/graphics/Gallery/kovar.vol/Cleanup/).
+The implementation uses StykAnimate's existing solver and native pose semantics.
+
+## Options
+
+| Field | Meaning |
+| --- | --- |
+| `action` | `walk` (default), `idle`, `wave`, `reach`. |
+| `start` | Zero-based tick; defaults to the playhead. A start beyond the tail uses the last visible pose. |
+| `duration` | Number of output ticks, 2–2400; default is approximately two seconds at the document FPS. |
+| `distance` | Signed scene-pixel travel for `walk`; default is twice the shorter leg's reach. Other actions use zero. |
+| `stepLength` | Scene-pixel stride spacing, 12%–55% of the shorter leg length; default 48%. |
+| `groundY` | World-space floor height; default is the lower initial ankle. An explicit height places the character on that floor. |
+| `intensity` | 0–1.5, default 1; secondary motion strength. |
+| `blend` | Seconds of soft entrance/settling, 0–2; default 0.25. Walk contacts are not marked planted during the initial pose transition. |
+| `hand` | `left` or `right` for wave/reach, default `right`; refers to rig roles. |
+| `target` | Required world-space `{x,y}` for reach. Targets outside arm reach stop at the limb's reach without stretching. |
+| `after` | `hold` (default) keeps the generated final pose until a later existing key. `restore` adds the original pose at the exclusive end when the original animation continues. |
+| `rig` | Optional explicit native handle mapping below. |
+
+Motion is sampled once per output tick. Walking requires at least twelve samples
+per complete stride; increase duration for a longer distance. Preview returns the
+pose, foot contacts, target errors, normalized phase and transition weight without
+modifying the document. Planted contact points are constraints; reach targets can
+have a reported residual when unreachable.
+
+## Anatomy and compatibility
+
+Automatic detection follows native topology and named left/right limbs. It
+supports the built-in Walker/Blue figures and ordinary rigs with 1–8 connected
+spine bones, one head, two two-link arms and two two-link legs. Optional named
+foot segments are kept level. Extra ambiguous branches require an explicit map:
+
+```json
+{
+  "spine": [1, 2],
+  "head": 3,
+  "leftArm": [4, 5],
+  "rightArm": [6, 7],
+  "leftLeg": [8, 9],
+  "rightLeg": [10, 11],
+  "leftFoot": 12,
+  "rightFoot": 13
+}
+```
+
+IDs are native handles, not array positions. The pelvis is the figure root;
+legs attach there, and arms/head attach to the spine tip. Mapped limbs must be
+straight articulated bones with positive lengths. Existing scales and authored
+lengths are respected. Managed IK controllers remain enabled but become unpinned
+in generated poses so normal pose evaluation reproduces the baked result; target
+positions and bend continuity are refreshed for later manual posing.
+
+This version rejects joined figures, static main bones, spatial/connector rigs,
+re-rooted animation origins and extra pinned controllers. It does not retarget
+3D rigs. Explicit legacy figure X/Y/rotation channels must be baked or removed
+before generating pose motion. Locked layers and unfinished native working-frame
+drafts reject generation before publication. Other figures and artwork are
+preserved; apply motion to a character on its own layer in dense scenes.
+
+## Document, history and resource lifetime
+
+Native documents receive a figure pose channel. Layer-sheet documents receive
+ordinary layer keys. Generated time extends unlocked tracks that previously
+ended at the animation tail, preserving the background and other held artwork.
+Source media and figure definitions are not recreated. Existing keys outside the
+requested range remain, with boundary poses marking the edit; adding boundaries
+can change interpolation in their neighboring spans. `restore` may intentionally
+return to a different original position at the range boundary.
+
+Generation publishes one command, including its new pose sources. Undo removes
+those sources, redo restores them, and STYK saving/reopening retains the result.
+The output remains manually editable and exports through the normal renderer and
+file formats without a new runtime motion format.
+
+Browser preparation runs in a disposable worker. Source input includes bone
+geometry and the selected pose, omitting embedded artwork and unrelated scenes.
+Node uses the same sampler with cooperative yields. Both preparation and staging
+check cancellation, selection/document identity and revision before publication;
+stale work is discarded. Workers terminate after success, failure, timeout or
+abort. No cross-document motion cache or background queue is retained.
+
+Limits bound each operation: 2400 poses, 500,000 selected-bone samples, a 64 MiB
+serialized-pose estimate, 100,000 captured layer objects and 1,000,000 layer-bone
+samples. These are authoring limits, not a guarantee on total process memory.
+
+## Verification
+
+```sh
+node --test tests/human-motion.test.mjs
+node tests/human-motion.browser.mjs
+node scripts/smoke-human-motion.mjs
+```
+
+The browser test uses actual workers with Chromium's GPU disabled, checks
+cancellation/disposal and cooperative interaction, and exports a real PNG. It
+uses the existing local backend test host. The smoke script exports an 18-second
+comparison and gesture demo, plus an editable STYK project and decoded contact
+sheet, to `artifacts/human-motion/`. It requires Chromium, FFmpeg and FFprobe.
+Reported timings describe the named fixture and machine only.

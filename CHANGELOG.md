@@ -8,6 +8,7 @@ What's new in each version of StykAnimate.
 
 ### Added
 
+- Generate editable walking, breathing, waving and reaching motions for 2D characters.
 - Create shapes and animations with scripts or AI agents, save editable projects, and export previews or MP4/WebM videos with sound without opening the app.
 - StykAnimate is now open source: its code is on GitHub under the GPL-3.0 license.
 - Everyday Props · Pivot 3D: 30 editable everyday objects with working hinges and wheels for your animations.

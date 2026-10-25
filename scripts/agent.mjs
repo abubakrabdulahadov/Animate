@@ -31,7 +31,7 @@ export async function runJob(job, {directory = process.cwd(), signal} = {}) {
   let lastResult;
   for (const [index, command] of job.commands.entries()) {
     signal?.throwIfAborted();
-    try { lastResult = await engine.executeAsync(command); }
+    try { lastResult = await engine.executeAsync(command,{signal}); }
     catch (error) { throw new Error(`Command ${index} (${command?.op ?? '?'}): ${error.message}`, {cause: error}); }
   }
   const result = engine.inspect();

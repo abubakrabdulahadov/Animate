@@ -68,6 +68,7 @@ function insertionOwner(editor,uid,hints){
 }
 export function drawingSheetPlan(editor,ids){return planner(editor,ids);}
 export function drawingSheetPublish(editor,plan,label,options){return publish(editor,plan,label,options);}
+export {drawingSheetPlan as planLayerSheetEdit,drawingSheetPublish as publishLayerSheetEdit};
 function planner(editor,ids){
   assertLayers(editor,ids);
   const before=editor.report._styk.layerSheet;if(!before)throw messageError(new Error(''), "errors.editorLayerSheet.openTheLayerTimelineFirst", {});

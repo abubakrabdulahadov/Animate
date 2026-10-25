@@ -94,6 +94,10 @@ Use `node scripts/agent.mjs --stdio` for a persistent tool session or `--tools`
 to discover the native shape, rig, layer, animation, effect and media tools. See
 [Agent API](docs/AGENT-API.md) for commands, prerequisites and examples.
 
+The engine can also generate editable walking, breathing, waving and reaching
+poses for ordinary 2D humanoids, with planted feet and coordinated upper-body
+motion. See [Human motion](docs/HUMAN-MOTION.md).
+
 ## Contributing
 
 Bug reports, ideas, translations and pull requests are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) first, and follow the [Code of Conduct](CODE_OF_CONDUCT.md). Report security problems privately as described in [SECURITY.md](SECURITY.md).

@@ -75,7 +75,7 @@ export function draftAnimation(editor, {keyOnly = false} = {}) {
   }};
   return draft;
 }
-export function recordAnimation(editor, label, draft, selection = editor._selectionState()) {
+export function recordAnimation(editor, label, draft, selection = editor._selectionState(), {frameSourceChanges,hadFrameSourceTable} = {}) {
   if (!draft.changed) return false;
   // The exposure sheet is the only animation store on layer documents. A
   // channel write here would create invisible legacy state instead of cells.
@@ -88,7 +88,7 @@ export function recordAnimation(editor, label, draft, selection = editor._select
   }
   assignAnimation(editor, draft.after);
   editor._record({kind: 'animation', label, before: draft.before, after: draft.after, beforeSelection: selection,
-    afterSelection: editor._selectionState(), structural: false, timing: true});
+    afterSelection: editor._selectionState(), structural: false, timing: true,...(frameSourceChanges?{frameSourceChanges,hadFrameSourceTable}:{})});
   editor._emit('edit', {label, animation: true, timing: true}); return true;
 }
 function mutateAnimation(editor, label, mutate) {

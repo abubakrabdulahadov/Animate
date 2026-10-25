@@ -59,7 +59,7 @@ export class AgentSession {
   async _invoke(tool,args,signal) {
     signal?.throwIfAborted();
     if(typeof tool!=='string')throw new TypeError('tool must be a string.');
-    if(tool.startsWith('editor_')){checked(args,['args','selection','at']);return this.engine.callAsync({method:tool.slice(7),...args});}
+    if(tool.startsWith('editor_')){checked(args,['args','selection','at']);return this.engine.callAsync({method:tool.slice(7),...args},{signal});}
     const descriptor=extras.find(t=>t.name===tool);if(!descriptor)throw new Error(`Unknown tool: ${tool}`);
     checked(args,Object.keys(descriptor.inputSchema.properties));
     const engine=this.engine;
@@ -152,7 +152,7 @@ export async function serveAgent({input=process.stdin,output=process.stdout,sess
         if(request.id!==undefined&&request.id!==null&&typeof request.id!=='string'&&!Number.isSafeInteger(request.id))throw new TypeError('id must be a string or integer.');
         id=request.id??null;let result;
         if(request.tool!==undefined){checked(request,['id','tool','arguments']);result=await session.invoke(request.tool,request.arguments??{},signal);}
-        else{const {id:ignored,...command}=request;signal?.throwIfAborted();result=await session.engine.executeAsync(command);}
+        else{const {id:ignored,...command}=request;signal?.throwIfAborted();result=await session.engine.executeAsync(command,{signal});}
         await send({id,ok:true,result});
       }catch(error){await send({id,ok:false,error:error.message,revision:session.engine.editor.revision});if(signal?.aborted)break;}
     }

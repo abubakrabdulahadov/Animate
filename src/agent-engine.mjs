@@ -139,14 +139,20 @@ export class AgentEngine {
     const value=this.editor[options.method](...args);
     return {value:structuredClone(value===this.editor?null:value??null),state:this.inspect()};
   }
-  async callAsync(options) {
+  async callAsync(options,{signal}={}) {
+    signal?.throwIfAborted();
     fields(options,['method','args','selection','at']);
-    const {args}=this._prepareCall(options);this._busy=true;
-    try{const value=await this.editor[options.method](...args);return {value:structuredClone(value===this.editor?null:value??null),state:this.inspect()};}
+    const {args,descriptor}=this._prepareCall(options),parameters=args.slice();
+    if(signal&&descriptor.signalArgument!==undefined){const index=descriptor.signalArgument,existing=parameters[index];
+      if(existing!==undefined&&!object(existing))throw new TypeError('Cancellation options must be an object.');
+      parameters[index]={...existing,signal:existing?.signal?AbortSignal.any([existing.signal,signal]):signal};}
+    this._busy=true;
+    try{const value=await this.editor[options.method](...parameters);return {value:structuredClone(value===this.editor?null:value??null),state:this.inspect()};}
     finally{this._busy=false;}
   }
-  async executeAsync(command) {
-    if(command?.op==='call'){fields(command,['op','method','args','selection','at']);const {op,...options}=command;return this.callAsync(options);}
+  async executeAsync(command,options={}) {
+    options.signal?.throwIfAborted();
+    if(command?.op==='call'){fields(command,['op','method','args','selection','at']);const {op,...parameters}=command;return this.callAsync(parameters,options);}
     return this.execute(command);
   }
   execute(command) {

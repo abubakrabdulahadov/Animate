@@ -53,6 +53,7 @@ const groups = {
   audio: `addAudioTrack importAudio setAudioTrack deleteAudioTrack setAudioClip splitAudioClip duplicateAudioClip
     copyAudioClip cutAudioClip pasteAudioClip deleteAudioClip rippleAudio`,
   history: `undo redo`,
+  human: `getHumanRig previewHumanMotion applyHumanMotion`,
 };
 
 // Common tools document positional argument names; other tools link to the native API contract.
@@ -88,12 +89,14 @@ const signatures = {
   createMovieclip: 'options?', enterMovieclip: 'figureTypeId?', leaveMovieclip: 'options?',
   addAudioTrack: 'name?', importAudio: 'asset, options?', setAudioClip: 'id, patch, targetTrackId?',
   setAudioTrack: 'id, patch', splitAudioClip: 'id, timeSeconds?',
+  getHumanRig:'mapping?',previewHumanMotion:'options?, sampleTick?',applyHumanMotion:'options?, cancellationOptions?',
 };
-const asynchronous = new Set(['insertInbetweenFramesAsync', 'bakeCameraMotion', 'bakeMovieclip']);
+const asynchronous = new Set(['insertInbetweenFramesAsync', 'bakeCameraMotion', 'bakeMovieclip','applyHumanMotion']);
+const signalArguments={insertInbetweenFramesAsync:2,bakeCameraMotion:0,applyHumanMotion:1};
 const registry = new Map();
 for (const [category, names] of Object.entries(groups)) for (const method of names.trim().split(/\s+/)) {
   if (registry.has(method)) throw new Error(`Duplicate agent method: ${method}`);
-  registry.set(method, {method, category, async: asynchronous.has(method), signature: signatures[method]});
+  registry.set(method, {method, category, async: asynchronous.has(method), signature: signatures[method],...(Object.hasOwn(signalArguments,method)?{signalArgument:signalArguments[method]}:{})});
 }
 
 export const selectionSchema = {type:'object', additionalProperties:false, properties:{

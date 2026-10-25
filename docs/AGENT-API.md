@@ -107,6 +107,7 @@ colors use native COLORREF. Use the typed style commands when possible.
 | `movieclips` | Create, enter/leave, edit playback, split, make unique, expand and bake nested animation. |
 | `audio` | Tracks, clips, timing, trims, fades, gains, mute/solo, splitting, duplication and clipboards. |
 | `history` | Existing undo and redo. |
+| `human` | Discover a humanoid rig, preview poses, and generate walking, breathing, waving or reaching through the native engine. |
 
 The explicit catalogue exposes JSON-callable authoring commands. Callback
 transactions, pointer gestures, private methods, document-session internals,
@@ -197,6 +198,10 @@ commands are `tools`, `query`, `snapshot`, `validate`, and `call`:
 ```
 
 Advanced calls are awaited, including asynchronous baking and in-between work.
+`editor_applyHumanMotion` generates coordinated 2D character motion as editable
+pose keys in one undo step. See [Human motion](HUMAN-MOTION.md) and
+[agent-human-motion.json](../examples/agent-human-motion.json) for options and rig
+mapping. Discover these tools with `--tools human`.
 The final advanced command's result is returned in the job's `result` field.
 Batch export settings go in the existing `video` field, including `tick` for
 PNG/SVG output; for example `"video":{"width":1280,"height":720,"audio":true}`.
