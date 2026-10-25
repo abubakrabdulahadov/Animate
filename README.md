@@ -89,7 +89,9 @@ Start with [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Feature behavior is doc
 
 AI agents and scripts can create and edit animations without controlling the UI:
 `node scripts/agent.mjs job.json`. The DOM-free JavaScript API and JSON batch CLI
-support editable `.styk` projects and headless MP4/WebM export. See
+support editable `.styk` projects, PNG/SVG previews and MP4/WebM export with audio.
+Use `node scripts/agent.mjs --stdio` for a persistent tool session or `--tools`
+to discover the native shape, rig, layer, animation, effect and media tools. See
 [Agent API](docs/AGENT-API.md) for commands, prerequisites and examples.
 
 ## Contributing

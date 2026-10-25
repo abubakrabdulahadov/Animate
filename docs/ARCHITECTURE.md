@@ -3,10 +3,15 @@
 StykAnimate separates the editable Pivot document, background work, and presentation. Changing the renderer or transport should not change file semantics or editor commands.
 
 `agent-engine.mjs` exposes the existing DOM-free editor through explicit agent
-commands, without a separate document model. The source-only batch CLI in
-`scripts/agent.mjs` reads JSON jobs and saves native containers atomically.
+commands, without a separate document model. `agent-tools.mjs` registers the
+JSON-callable native authoring surface; queries expose detached, paginated
+document and geometry views. The source-only CLI in `scripts/agent.mjs` accepts
+batch jobs or a persistent JSONL session (`agent-session.mjs`). File operations
+share bounded reads and atomic writes in `agent-files.mjs`; local text, PNG and
+WAV adapters reuse the existing portable media compilers and validation.
 `agent-video.mjs` hosts a blank local headless runtime for the existing worker
-frame exporter and streamed video encoders; it never loads the application UI.
+frame exporter, audio mixer and streamed video encoders, including PNG/SVG
+previews; it never loads the application UI.
 See [Agent API](AGENT-API.md) for its supported operations and limits.
 
 ## Document and commands

@@ -6,7 +6,9 @@ import {fileURLToPath} from 'node:url';
 const root = fileURLToPath(new URL('../', import.meta.url));
 
 /** A blank headless runtime, without loading the application or automating UI. */
-export async function renderAgentVideo(report, {format, start = 0, end, browserPath, signal, write, patch}) {
+export async function renderAgentVideo(report, {format, start = 0, end, width=report.canvas_width,
+  height=report.canvas_height, smoothing='edges', audio=true, browserPath, signal, write, patch}) {
+  if(!['mp4','webm','png','svg'].includes(format))throw new Error('Unsupported agent render format.');
   const {chromium} = await import('playwright');
   const server = createServer(async (request, response) => {
     try {
@@ -38,10 +40,11 @@ export async function renderAgentVideo(report, {format, start = 0, end, browserP
     await page.exposeFunction('agentWrite', bytes => write(Uint8Array.from(bytes)));
     await page.exposeFunction('agentPatch', (offset, bytes) => patch(offset, Uint8Array.from(bytes)));
     await page.goto(origin);
-    return await page.evaluate(async ({report, format, start, end}) => {
+    return await page.evaluate(async ({report, format, start, end, width, height, smoothing, audio}) => {
       const {ExportFrameRenderer} = await import('/src/export-frame-renderer.mjs');
       const {encodeMP4, encodeWebM} = await import('/src/video-export.mjs');
-      const renderer = new ExportFrameRenderer({width: report.canvas_width, height: report.canvas_height});
+      const renderer = new ExportFrameRenderer({width, height, smoothing});
+      let audioEngine;
       try {
         await renderer.load(report);
         const sink = {streamed: true,
@@ -53,11 +56,27 @@ export async function renderAgentVideo(report, {format, start = 0, end, browserP
           patch: (offset, bytes) => globalThis.agentPatch(offset, Array.from(bytes)),
           finish: async () => ({frames: end - start, fps: report.fps}),
           abort: async () => {}};
-        return await (format === 'mp4' ? encodeMP4 : encodeWebM)({width: report.canvas_width,
-          height: report.canvas_height, fps: report.fps, totalFrames: end - start,
-          renderFrame: index => renderer.renderTick(start + index), sink});
-      } finally { renderer.dispose(); }
-    }, {report, format, start, end});
+        if(format==='svg'){
+          await sink.write(await renderer.renderSVGTick(start));
+          return {frames:1,format};
+        }
+        if(format==='png'){
+          const canvas=await renderer.renderTick(start);
+          await sink.write(await new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('PNG encoding failed.')),'image/png')));
+          return {frames:1,format};
+        }
+        let audioChunks;
+        if(audio){
+          const {audibleClips,audioState}=await import('/src/audio-model.mjs');
+          if(audibleClips(audioState(report)).length){
+            const {AudioEngine}=await import('/src/audio-engine.mjs');audioEngine=new AudioEngine();
+            audioChunks=audioEngine.exportChunks(report,{start:start/report.fps,duration:(end-start)/report.fps});
+          }
+        }
+        return await (format === 'mp4' ? encodeMP4 : encodeWebM)({width,height, fps: report.fps, totalFrames: end - start,
+          renderFrame: index => renderer.renderTick(start + index), sink,audioChunks});
+      } finally { audioEngine?.dispose();renderer.dispose(); }
+    }, {report, format, start, end, width, height, smoothing, audio});
   } finally {
     signal?.removeEventListener('abort', abort);
     try { await browser?.close(); }

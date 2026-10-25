@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "name": "Animated polygon",
+  "commands": [
+    {"op": "project", "width": 640, "height": 360, "fps": 24},
+    {"op": "draw", "segments": [{"type": "line", "length": 120, "angle": 0, "thickness": 3, "start": {"x": 220, "y": 250}}]},
+    {"op": "call", "method": "addSegments", "args": [[{"parentId": 1, "length": 120, "angle": -2.0943951024, "thickness": 3}, {"parentId": 0, "length": 120, "angle": -1.0471975512, "thickness": 3}]]},
+    {"op": "call", "method": "addPolygon", "args": [[0, 1, 2], {"color": "#ffbb55"}]},
+    {"op": "call", "method": "updateFigureStyle", "args": [{"name": "Triangle"}]},
+    {"op": "duration", "ticks": 12},
+    {"op": "duplicateFrame"},
+    {"op": "move", "uid": 1, "dx": 100, "dy": -40},
+    {"op": "rotate", "uid": 1, "radians": 0.4},
+    {"op": "duration", "ticks": 12},
+    {"op": "duplicateFrame"},
+    {"op": "move", "uid": 1, "dx": 60, "dy": 30},
+    {"op": "call", "method": "insertInbetweenFramesAsync", "args": [0.5, [0, 1]]}
+  ],
+  "output": "agent-shapes.styk"
+}
