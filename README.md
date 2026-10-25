@@ -98,6 +98,11 @@ The engine can also generate editable walking, breathing, waving and reaching
 poses for ordinary 2D humanoids, with planted feet and coordinated upper-body
 motion. See [Human motion](docs/HUMAN-MOTION.md).
 
+Create dense editable scarves, capes and skirts with `editor_addCloth`, then
+animate their drape and wind response with human motion or `editor_applyClothMotion`.
+Carrying poses keep elbows down while supporting one or both hand grips.
+See [Cloth motion](docs/CLOTH-MOTION.md).
+
 ## Contributing
 
 Bug reports, ideas, translations and pull requests are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) first, and follow the [Code of Conduct](CODE_OF_CONDUCT.md). Report security problems privately as described in [SECURITY.md](SECURITY.md).

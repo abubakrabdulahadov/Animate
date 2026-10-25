@@ -20,6 +20,13 @@ worker, then stages existing animation/layer-sheet commands with revision checks
 and cooperative yields. Generated output is ordinary native pose data; playback,
 rendering and saving need no procedural evaluator. See [Human motion](HUMAN-MOTION.md).
 
+`cloth-motion.mjs` compiles dense planar cloth into native handles and triangle
+fills. Its deterministic deformer is shared by human sampling and standalone
+cloth preparation. `editor-cloth.mjs` captures existing poses cooperatively and
+uses the same worker and publication path as human motion, preserving root/body
+animation and command history. Opaque cloth triangles reuse software painting's
+existing union path to avoid internal antialiasing cracks. See [Cloth motion](CLOTH-MOTION.md).
+
 ## Document and commands
 
 `startup-document.mjs` supplies Blue for application startup and File → New. Camera, Scene and Layer 1 each contain one constant key at frame 1, held through frame 10. Blue is an ordinary 2D stick figure with ten named joints, a filled circular head, symmetric limbs and slightly bent elbows/knees. Four independent two-bone hand/foot IK controllers start enabled and unpinned, without stretching. `scripts/build-startup-blue.mjs` builds the native lines/circle and configures IK through the editor, generating a synchronous data factory; every new document owns independent editable data without rig setup at startup. STYK/STKZ retain the editable IK controls; Pivot STK/PIV retain ordinary 2D artwork and baked poses, without IK controllers. The Bubble helper and `demo.mjs` remain separate legacy tutorial/test fixtures.

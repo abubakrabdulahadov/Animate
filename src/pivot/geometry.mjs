@@ -1296,20 +1296,41 @@ function drawPrimitives(ctx, items, resources, stroke, paint = true, clip = null
     }
     // Outline and brush-only passes have nothing to paint for a solid mesh.
     if(s.type==='mesh')continue;
-    // Adjacent opaque triangles of a projected solid share coverage. Filling
+    // Adjacent opaque triangles of a projected solid or cloth share coverage. Filling
     // each separately antialiases the internal edges against the background.
     // Union consecutive, equally wound faces without crossing painter layers.
     if(paint&&ctx.globalAlpha===1&&opaqueSurfaceTriangle(s)){
       const winding=triangleWinding(s.points),rgb=s.rgb;
       fill(rgba(rgb,1));strokeWidth(stroke,0);ctx.beginPath();
+      const cloth=!!s.poly?._stykCloth&&s.poly.segment_ids?.length===3,edges=cloth?new Map():null,vertices=cloth?new Map():null;
       let end=itemIndex;
       for(;;){
         const face=items[end],p=face.points;
         if(clip&&primitiveOutsideRasterClip(face,clip,0)){if(clip.stats)clip.stats.culledPrimitives++;}
-        else{ctx.moveTo(p[0].x,p[0].y);ctx.lineTo(p[1].x,p[1].y);ctx.lineTo(p[2].x,p[2].y);ctx.closePath();}
+        else if(cloth){
+          const ids=face.poly.segment_ids;
+          for(let i=0;i<3;i++){
+            const a=ids[i],b=ids[(i+1)%3];vertices.set(a,p[i]);
+            const opposite=edges.get(b);
+            if(opposite?.delete(a)){if(!opposite.size)edges.delete(b);}
+            else{let outgoing=edges.get(a);if(!outgoing){outgoing=new Set();edges.set(a,outgoing);}outgoing.add(b);}
+          }
+        }else{ctx.moveTo(p[0].x,p[0].y);ctx.lineTo(p[1].x,p[1].y);ctx.lineTo(p[2].x,p[2].y);ctx.closePath();}
         const next=items[end+1];
         if(!opaqueSurfaceTriangle(next)||next.rgb.some((c,i)=>c!==rgb[i])||triangleWinding(next.points)!==winding)break;
+        if(cloth&&(next.obj!==s.obj||next.poly._stykCloth?.id!==s.poly._stykCloth.id||next.poly.segment_ids?.length!==3))break;
+        if(!cloth&&next.poly._stykCloth)break;
         end++;
+      }
+      // Cancel shared native edges before filling a dense cloth batch. Thousands
+      // of coincident internal subpaths make Canvas winding evaluation expensive.
+      if(cloth)while(edges.size){
+        const start=edges.keys().next().value,p=vertices.get(start);ctx.moveTo(p.x,p.y);let current=start;
+        do{const outgoing=edges.get(current);if(!outgoing?.size)break;
+          const next=outgoing.values().next().value;outgoing.delete(next);if(!outgoing.size)edges.delete(current);
+          const point=vertices.get(next);ctx.lineTo(point.x,point.y);current=next;
+        }while(current!==start);
+        ctx.closePath();
       }
       ctx.fill('nonzero');itemIndex=end;continue;
     }
@@ -1495,5 +1516,5 @@ function drawPrimitives(ctx, items, resources, stroke, paint = true, clip = null
     ctx.stroke();
   }
 }
-function opaqueSurfaceTriangle(s){return s?.type==='poly'&&s.poly?._stykSurface?.depth?.length&&s.points.length===3&&s.alpha===1&&!s.outline;}
+function opaqueSurfaceTriangle(s){return s?.type==='poly'&&(s.poly?._stykSurface?.depth?.length||s.poly?._stykCloth?.id)&&s.points.length===3&&s.alpha===1&&!s.outline;}
 function triangleWinding([a,b,c]){return Math.sign((b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x));}

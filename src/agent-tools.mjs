@@ -54,6 +54,7 @@ const groups = {
     copyAudioClip cutAudioClip pasteAudioClip deleteAudioClip rippleAudio`,
   history: `undo redo`,
   human: `getHumanRig previewHumanMotion applyHumanMotion`,
+  cloth: `addCloth getClothMeshes previewClothMotion applyClothMotion`,
 };
 
 // Common tools document positional argument names; other tools link to the native API contract.
@@ -90,9 +91,10 @@ const signatures = {
   addAudioTrack: 'name?', importAudio: 'asset, options?', setAudioClip: 'id, patch, targetTrackId?',
   setAudioTrack: 'id, patch', splitAudioClip: 'id, timeSeconds?',
   getHumanRig:'mapping?',previewHumanMotion:'options?, sampleTick?',applyHumanMotion:'options?, cancellationOptions?',
+  addCloth:'options?',getClothMeshes:'',previewClothMotion:'options?, seconds?',applyClothMotion:'options?, cancellationOptions?',
 };
-const asynchronous = new Set(['insertInbetweenFramesAsync', 'bakeCameraMotion', 'bakeMovieclip','applyHumanMotion']);
-const signalArguments={insertInbetweenFramesAsync:2,bakeCameraMotion:0,applyHumanMotion:1};
+const asynchronous = new Set(['insertInbetweenFramesAsync', 'bakeCameraMotion', 'bakeMovieclip','applyHumanMotion','applyClothMotion']);
+const signalArguments={insertInbetweenFramesAsync:2,bakeCameraMotion:0,applyHumanMotion:1,applyClothMotion:1};
 const registry = new Map();
 for (const [category, names] of Object.entries(groups)) for (const method of names.trim().split(/\s+/)) {
   if (registry.has(method)) throw new Error(`Duplicate agent method: ${method}`);

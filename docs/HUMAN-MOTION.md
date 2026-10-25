@@ -1,7 +1,6 @@
 # Human motion
 
-The native `Editor` can generate coordinated walking, breathing, waving and
-reaching for an ordinary planar humanoid. It writes editable pose keys using the
+The native `Editor` can generate coordinated walking, breathing, waving, reaching and carrying for an ordinary planar humanoid. It writes editable pose keys using the
 existing document, IK solver and command history. It is available through the
 engine and agent API; there is no new toolbar or automatic alteration of existing
 animation.
@@ -58,6 +57,18 @@ The implementation uses StykAnimate's existing solver and native pose semantics.
 | `target` | Required world-space `{x,y}` for reach. Targets outside arm reach stop at the limb's reach without stretching. |
 | `after` | `hold` (default) keeps the generated final pose until a later existing key. `restore` adds the original pose at the exclusive end when the original animation continues. |
 | `rig` | Optional explicit native handle mapping below. |
+| `carry` | `{hand:'left'\|'right'\|'both', forward?, height?}` keeps a carrying grip during walk/idle; fractions default to .45/.32 of arm reach. |
+| `cloth` | Cloth motion settings, or `false` to keep attached cloth rigid; see [Cloth motion](CLOTH-MOTION.md). |
+
+`action:'carry'` provides a carrying pose, optionally with `distance` for walking.
+It also accepts `hand:'both'`. Carrying selects the lower elbow solution, so the
+upper arm hangs down and the forearm rises toward the load. `carry.forward`
+(0.1–0.7) and `carry.height` (0.05–0.7) place the hand forward and below the shoulder
+as fractions of arm reach. Default carrying keeps the wrist above the elbow.
+The sampler/preview returns world-space `grips.left`/`grips.right` coordinates for
+held artwork. Generate the character poses before attaching props to their hand
+handles; joined groups must be detached before motion generation. Walking can
+use `carry:{hand:'left'}` while the other arm swings freely.
 
 Motion is sampled once per output tick. Walking requires at least twelve samples
 per complete stride; increase duration for a longer distance. Preview returns the

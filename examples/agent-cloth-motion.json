@@ -1,0 +1,10 @@
+{
+  "version":1,
+  "name": "Carrying with a dense scarf",
+  "commands": [
+    {"op":"addFigure"},
+    {"op":"call","method":"addCloth","args":[{"preset":"scarf","anchorId":1,"rows":30,"columns":5,"color":"#d68170"}]},
+    {"op":"call","method":"applyHumanMotion","args":[{"action":"carry","hand":"left","duration":120,"distance":180,"cloth":{"wind":{"x":-18,"y":0},"flutter":6}}]}
+  ],
+  "output":"agent-cloth-motion.styk"
+}

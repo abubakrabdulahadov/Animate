@@ -71,6 +71,7 @@ import {editorDrawingMethods,applyDrawingCommand} from './editor-drawing.mjs';
 import {DrawingResources,drawingResourcesFor} from './drawing-resources.mjs';
 import {editorSessionMethods} from './editor-sessions.mjs';
 import {editorHumanMotionMethods} from './editor-human-motion.mjs';
+import {editorClothMethods} from './editor-cloth.mjs';
 
 const clone = value => structuredClone(value);
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -1778,6 +1779,7 @@ Object.assign(Editor.prototype, editorTweenerMethods);
 Object.assign(Editor.prototype, editorAudioMethods);
 Object.assign(Editor.prototype, editorSessionMethods);
 Object.assign(Editor.prototype, editorHumanMotionMethods);
+Object.assign(Editor.prototype, editorClothMethods);
 Object.defineProperties(Editor.prototype, Object.getOwnPropertyDescriptors(editorFrameDraftMethods));
 Editor.prototype._topologyEdit.frameDraftAware = true;
 Editor.prototype.replaceFigureDefinition.frameDraftAware = true;

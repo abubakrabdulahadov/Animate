@@ -107,7 +107,8 @@ colors use native COLORREF. Use the typed style commands when possible.
 | `movieclips` | Create, enter/leave, edit playback, split, make unique, expand and bake nested animation. |
 | `audio` | Tracks, clips, timing, trims, fades, gains, mute/solo, splitting, duplication and clipboards. |
 | `history` | Existing undo and redo. |
-| `human` | Discover a humanoid rig, preview poses, and generate walking, breathing, waving or reaching through the native engine. |
+| `human` | Discover a humanoid rig, preview poses, and generate walking, breathing, waving, reaching or carrying. |
+| `cloth` | Create dense editable scarves/capes/skirts, preview deformation, and bake cloth over existing motion. |
 
 The explicit catalogue exposes JSON-callable authoring commands. Callback
 transactions, pointer gestures, private methods, document-session internals,

@@ -1,10 +1,10 @@
-import {createHumanMotion} from './human-motion.mjs';
+import {createPoseMotionSampler} from './pose-motion-sampler.mjs';
 
 /** One bounded preparation, terminated on cancellation; no persistent pose cache. */
 export async function prepareHumanMotion(input,{signal}={}) {
   signal?.throwIfAborted();
   if(typeof Worker==='undefined'){
-    const motion=createHumanMotion(input.figure,input.object,input.options,input.fps),poses=[];
+    const motion=createPoseMotionSampler(input),poses=[];
     let yielded=performance.now();
     for(let tick=0;tick<motion.settings.duration;tick++){
       signal?.throwIfAborted();poses.push(motion.sample(tick).pose);
