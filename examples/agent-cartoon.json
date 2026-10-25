@@ -1,0 +1,11 @@
+{
+  "version":1,
+  "name":"Filled cartoon character",
+  "commands":[
+    {"op":"project","width":1280,"height":720,"fps":24},
+    {"op":"call","method":"addCartoonCharacter","args":[{"name":"Aziz","position":{"x":570,"y":380},"palette":{"shirt":"#68a6a0"}}]},
+    {"op":"call","method":"applyHumanMotion","args":[{"action":"carry","hand":"left","duration":96,"distance":130}]},
+    {"op":"call","method":"addFilledShape","args":[{"shape":"speechBubble","width":160,"height":80,"color":"#f1ce8f","position":{"x":820,"y":170}}]}
+  ],
+  "output":"agent-cartoon.styk"
+}

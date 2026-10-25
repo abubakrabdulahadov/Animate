@@ -109,6 +109,7 @@ colors use native COLORREF. Use the typed style commands when possible.
 | `history` | Existing undo and redo. |
 | `human` | Discover a humanoid rig, preview poses, and generate walking, breathing, waving, reaching or carrying. |
 | `cloth` | Create dense editable scarves/capes/skirts, preview deformation, and bake cloth over existing motion. |
+| `cartoon` | Create filled cartoon characters with hidden controls and filled UI-style graphics. |
 
 The explicit catalogue exposes JSON-callable authoring commands. Callback
 transactions, pointer gestures, private methods, document-session internals,

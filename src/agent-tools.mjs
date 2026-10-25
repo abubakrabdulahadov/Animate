@@ -55,6 +55,7 @@ const groups = {
   history: `undo redo`,
   human: `getHumanRig previewHumanMotion applyHumanMotion`,
   cloth: `addCloth getClothMeshes previewClothMotion applyClothMotion`,
+  cartoon: `addCartoonCharacter addFilledShape`,
 };
 
 // Common tools document positional argument names; other tools link to the native API contract.
@@ -92,6 +93,7 @@ const signatures = {
   setAudioTrack: 'id, patch', splitAudioClip: 'id, timeSeconds?',
   getHumanRig:'mapping?',previewHumanMotion:'options?, sampleTick?',applyHumanMotion:'options?, cancellationOptions?',
   addCloth:'options?',getClothMeshes:'',previewClothMotion:'options?, seconds?',applyClothMotion:'options?, cancellationOptions?',
+  addCartoonCharacter:'options?',addFilledShape:'options?',
 };
 const asynchronous = new Set(['insertInbetweenFramesAsync', 'bakeCameraMotion', 'bakeMovieclip','applyHumanMotion','applyClothMotion']);
 const signalArguments={insertInbetweenFramesAsync:2,bakeCameraMotion:0,applyHumanMotion:1,applyClothMotion:1};

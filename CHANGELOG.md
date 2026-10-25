@@ -8,6 +8,7 @@ What's new in each version of StykAnimate.
 
 ### Added
 
+- Create full-color cartoon characters and rounded panels, buttons, badges and speech bubbles with editable filled shapes.
 - Create finely jointed scarves, capes and skirts with adjustable density and editable wind and draping motion.
 - Generate editable walking, breathing, waving, reaching and natural carrying motions for 2D characters.
 - Create shapes and animations with scripts or AI agents, save editable projects, and export previews or MP4/WebM videos with sound without opening the app.
