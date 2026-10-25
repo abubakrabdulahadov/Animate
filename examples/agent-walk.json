@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "name": "Agent first animation",
+  "commands": [
+    {"op": "project", "width": 640, "height": 360, "fps": 12},
+    {"op": "addFigure"},
+    {"op": "duration", "ticks": 6},
+    {"op": "duplicateFrame"},
+    {"op": "move", "uid": 1, "dx": 80, "dy": 0},
+    {"op": "duration", "ticks": 6},
+    {"op": "duplicateFrame"},
+    {"op": "move", "uid": 1, "dx": 80, "dy": 0}
+  ],
+  "output": "agent-walk.styk"
+}

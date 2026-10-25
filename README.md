@@ -85,6 +85,13 @@ Browser tests (`tests/*.browser.mjs`) run against `npm run serve` with Chrome or
 
 Start with [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Feature behavior is documented in `docs/`, for example [the timeline](docs/TIMELINE.md), [scene editing](docs/SCENE-EDITING.md) and [the renderer](docs/renderer.md).
 
+## Agent automation
+
+AI agents and scripts can create and edit animations without controlling the UI:
+`node scripts/agent.mjs job.json`. The DOM-free JavaScript API and JSON batch CLI
+support editable `.styk` projects and headless MP4/WebM export. See
+[Agent API](docs/AGENT-API.md) for commands, prerequisites and examples.
+
 ## Contributing
 
 Bug reports, ideas, translations and pull requests are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) first, and follow the [Code of Conduct](CODE_OF_CONDUCT.md). Report security problems privately as described in [SECURITY.md](SECURITY.md).
