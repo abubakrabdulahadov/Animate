@@ -68,7 +68,7 @@ export function humanRig(figure,mapping) {
 }
 
 export function motionOptions(options,legLength,fps) {
-  for(const key of Object.keys(options))if(!['action','rig','start','duration','distance','stepLength','groundY','intensity','hand','target','blend','after','cloth','carry'].includes(key))throw new Error(`Unknown human motion option: ${key}`);
+  for(const key of Object.keys(options))if(!['action','rig','start','duration','distance','stepLength','groundY','intensity','hand','target','blend','after','cloth','carry','armBend'].includes(key))throw new Error(`Unknown human motion option: ${key}`);
   const action=options.action??'walk',duration=options.duration??Math.round(fps*2),blend=options.blend??.25;
   if(!HUMAN_ACTIONS.includes(action))throw new Error('Choose walk, idle, wave, reach or carry.');
   if(!Number.isInteger(duration)||duration<2||duration>HUMAN_MOTION_LIMITS.frames)throw new RangeError(`duration must be 2–${HUMAN_MOTION_LIMITS.frames} ticks.`);
@@ -77,6 +77,7 @@ export function motionOptions(options,legLength,fps) {
   if(!['walk','carry'].includes(action)&&distance!==0)throw new Error('distance belongs to walk or carry motion.');
   const stepLength=finite(options.stepLength??legLength*.48,'stepLength',legLength*.12,legLength*.55);
   const intensity=finite(options.intensity??1,'intensity',0,1.5);finite(blend,'blend',0,2);
+  const armBend=finite(options.armBend??.1,'armBend',0,.35);
   if(!(action==='carry'?['left','right','both']:['left','right']).includes(options.hand??'right'))throw new Error('Choose left/right, or both for carrying.');
   const carry=options.carry??(action==='carry'?{hand:options.hand??'right'}:null);
   if(carry){if(typeof carry!=='object'||Array.isArray(carry)||Object.keys(carry).some(k=>!['hand','forward','height'].includes(k)))throw new Error('carry needs {hand, forward?, height?}.');
@@ -87,7 +88,7 @@ export function motionOptions(options,legLength,fps) {
   if(options.after!==undefined&&!['hold','restore'].includes(options.after))throw new Error('after must be hold or restore.');
   if(options.groundY!==undefined)finite(options.groundY,'groundY');
   if(action==='reach'&&(!options.target||!Number.isFinite(options.target.x)||!Number.isFinite(options.target.y)))throw new Error('Reach needs a finite world-space target {x,y}.');
-  return {...options,carry,action,duration,distance,stepLength,intensity,blend,hand:options.hand??'right',after:options.after??'hold'};
+  return {...options,carry,armBend,action,duration,distance,stepLength,intensity,blend,hand:options.hand??'right',after:options.after??'hold'};
 }
 
 /** Build one small, immutable sampling context; no document or renderer caches. */
@@ -181,9 +182,11 @@ export function createHumanMotion(figure,object,options={},fps=24) {
     for(const side of ['left','right']){
       const role=`${side}Arm`,upper=rig[role][0],lower=rig[role][1],shoulder=currentPoints().points.get(figure.segments[index(upper)].parent_id);
       const a=lengths[index(upper)],b=lengths[index(lower)],out=side==='left'?1:-1;
-      const opposing=side===front?-1:1,armPhase=phase-.22,armSwing=.34*Math.cos(armPhase)*opposing*direction*Math.min(body,1.2);
-      let hand={x:shoulder.x+Math.sin(armSwing)*(.80*(a+b))+out*.04*(a+b),y:shoulder.y+(a+b)*.92};
-      if(!walking)hand={x:point(lower).x+(x-root.x)+out*.012*(a+b)*breath*body,y:point(lower).y+(y-root.y)+.004*breath*(a+b)*body};
+      const relaxed=walking||settings.action==='carry';
+      const opposing=side===front?-1:1,armPhase=phase-.22,armSwing=walking?.22*Math.cos(armPhase)*opposing*direction*Math.min(body,1.2):0;
+      const flex=settings.armBend*(.85+.15*Math.abs(Math.sin(armPhase))),reach=Math.sqrt(a*a+b*b+2*a*b*Math.cos(flex));
+      let hand={x:shoulder.x+Math.sin(armSwing)*reach,y:shoulder.y+Math.cos(armSwing)*reach};
+      if(!relaxed)hand={x:point(lower).x+(x-root.x)+out*.012*(a+b)*breath*body,y:point(lower).y+(y-root.y)+.004*breath*(a+b)*body};
       if(settings.action==='wave'&&side===settings.hand){
         const raise=ease(seconds/Math.max(.2,durationSeconds*.22))*(1-ease((seconds-durationSeconds*.78)/Math.max(.2,durationSeconds*.22)));
         hand={x:mix(hand.x,shoulder.x+out*(.43+.12*Math.sin(seconds*8))*(a+b),raise),y:mix(hand.y,shoulder.y-(a+b)*(.39+.04*Math.cos(seconds*8)),raise)};
@@ -196,7 +199,7 @@ export function createHumanMotion(figure,object,options={},fps=24) {
       const restBend=Math.sign((restHand.x-restStart.x)*(restElbow.y-restStart.y)-(restHand.y-restStart.y)*(restElbow.x-restStart.x))||out;
       const carrying=settings.carry&&(settings.carry.hand===side||settings.carry.hand==='both');
       if(carrying)hand={x:shoulder.x+direction*(settings.carry.forward??.45)*(a+b)+(settings.carry.hand==='both'?out*.025*(a+b):0),y:shoulder.y+(settings.carry.height??.32)*(a+b)};
-      solve(role,hand,walking?-direction:settings.action!=='idle'&&side===settings.hand?out:restBend,carrying);
+      solve(role,hand,relaxed?direction:settings.action!=='idle'&&side===settings.hand?out:restBend,carrying);
     }
     const final=currentPoints(),pose=snapshotPoseObject(rest);pose.root_x=x;pose.root_y=y;pose.angles=final.poseAngles;
     if(walking&&entry<1)pose.angles=pose.angles.map((a,i)=>angleMix(angles[i],a,entry));

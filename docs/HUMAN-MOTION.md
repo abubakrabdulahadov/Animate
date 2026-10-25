@@ -31,7 +31,9 @@ characters also use this API through the [spatial adapter](SPATIAL-CHARACTERS.md
 - The shared analytic two-link IK solver poses the legs. It preserves effective
   bone lengths; the pelvis lowers if needed to retain reach and avoid fully
   straight knees. Extra artwork inherits its parent bone's angle change.
-- Arms counter the stepping leg, with delayed swing and flexed elbows. Spine
+- Empty arms counter the stepping leg with a small delayed swing, hanging nearly
+  straight with a slight forward elbow bend. Carrying keeps its separate supporting
+  grip while the free arm relaxes, also when standing. Spine
   segments use offset phases, and the head compensates for torso inclination.
 - Idle poses keep the feet fixed while shifting weight and breathing gently.
   Waves ease into a raised arm, wave beside the head, then settle. Reaches arc
@@ -61,6 +63,7 @@ The implementation uses StykAnimate's existing solver and native pose semantics.
 | `carry` | `{hand:'left'\|'right'\|'both', forward?, height?}` keeps a carrying grip during walk/idle; fractions default to .45/.32 of arm reach. |
 | `cloth` | Cloth motion settings, or `false` to keep attached cloth rigid; see [Cloth motion](CLOTH-MOTION.md). |
 | `view`, `viewTo` | Spatial cartoon character body/head and orbital view endpoints; see [Spatial characters](SPATIAL-CHARACTERS.md). |
+| `armBend` | Empty-arm elbow flex in radians, 0–0.35; defaults to 0.1 (about 6°). Zero keeps the arm straight. Applies to walk/carry free arms in 2D and spatial characters. |
 
 `action:'carry'` provides a carrying pose, optionally with `distance` for walking.
 It also accepts `hand:'both'`. Carrying selects the lower elbow solution, so the

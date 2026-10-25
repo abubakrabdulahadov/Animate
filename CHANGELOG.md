@@ -29,6 +29,7 @@ What's new in each version of StykAnimate.
 
 ### Fixed
 
+- Walking characters keep empty arms relaxed with a slight forward elbow bend, including when carrying something in the other hand.
 - New cartoon characters keep their shoes at the feet and plant the soles when walking.
 - Fixed an error when deleting your last color palette.
 
