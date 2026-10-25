@@ -1,0 +1,28 @@
+{
+  "version":1,
+  "name":"Grounded steps and a shared 3D camera",
+  "commands":[
+    {"op":"project","width":960,"height":540,"fps":24},
+    {"op":"call","method":"addSpatialScene","args":[{
+      "position":{"x":480,"y":280},
+      "actors":[
+        {"name":"Aziz","position":[-100,0,0],"palette":{"shirt":"#4f9590"}},
+        {"name":"Nila","position":[100,0,-120],"palette":{"shirt":"#c1846b"}}
+      ],
+      "boxes":[
+        {"name":"Floor","position":[0,131,0],"size":[800,20,800],"color":[116,143,144]},
+        {"name":"Bench","position":[0,80,-150],"size":[200,20,65],"color":[152,118,86]}
+      ]
+    }]},
+    {"op":"call","method":"applySpatialSceneMotion","args":[{
+      "duration":144,
+      "actors":[
+        {"action":"walk","distance":180,"view":{"yaw":0.7},"viewTo":{"yaw":2.2}},
+        {"action":"turn","view":{"yaw":-0.6},"viewTo":{"yaw":1.8}}
+      ],
+      "camera":{"position":[60,-100,700],"target":[0,-15,0],"focalLength":700},
+      "cameraTo":{"position":[390,-170,500],"target":[40,-15,0]}
+    }]}
+  ],
+  "output":"agent-spatial-scene.styk"
+}

@@ -27,7 +27,9 @@ characters also use this API through the [spatial adapter](SPATIAL-CHARACTERS.md
 - Walking advances the pelvis with smooth acceleration and deceleration. The
   gait follows distance traveled rather than an independent animation clock.
   During stance the ankle stays at its world-space plant location; during swing
-  it follows a smooth forward arc with clearance above the ground.
+  it follows a smooth forward arc with clearance above the ground. Stride spacing
+  shortens to finish whole strides, so stopping settles both feet onto the floor;
+  the requested distance remains exact. The pelvis shifts gently with each support.
 - The shared analytic two-link IK solver poses the legs. It preserves effective
   bone lengths; the pelvis lowers if needed to retain reach and avoid fully
   straight knees. Extra artwork inherits its parent bone's angle change.
@@ -48,11 +50,11 @@ The implementation uses StykAnimate's existing solver and native pose semantics.
 
 | Field | Meaning |
 | --- | --- |
-| `action` | `walk` (default), `idle`, `wave`, `reach`. |
+| `action` | `walk` (default), `idle`, `wave`, `reach`, `carry`; spatial cartoon characters also accept `turn`. |
 | `start` | Zero-based tick; defaults to the playhead. A start beyond the tail uses the last visible pose. |
 | `duration` | Number of output ticks, 2–2400; default is approximately two seconds at the document FPS. |
 | `distance` | Signed scene-pixel travel for `walk`; default is twice the shorter leg's reach. Other actions use zero. |
-| `stepLength` | Scene-pixel stride spacing, 12%–55% of the shorter leg length; default 48%. |
+| `stepLength` | Maximum scene-pixel stride spacing, 12%–55% of the shorter leg length; default 48%. Actual spacing shortens to complete the final stride. |
 | `groundY` | World-space floor height; default is the lower sole height (the ankle for ordinary stick rigs). An explicit height places the character on that floor. |
 | `intensity` | 0–1.5, default 1; secondary motion strength. |
 | `blend` | Seconds of soft entrance/settling, 0–2; default 0.25. Walk contacts are not marked planted during the initial pose transition. |

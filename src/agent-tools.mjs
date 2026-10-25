@@ -55,7 +55,7 @@ const groups = {
   history: `undo redo`,
   human: `getHumanRig previewHumanMotion applyHumanMotion`,
   cloth: `addCloth getClothMeshes previewClothMotion applyClothMotion`,
-  cartoon: `addCartoonCharacter addFilledShape getCharacterView setCharacterView`,
+  cartoon: `addCartoonCharacter addFilledShape getCharacterView setCharacterView addSpatialScene previewSpatialSceneMotion applySpatialSceneMotion`,
 };
 
 // Common tools document positional argument names; other tools link to the native API contract.
@@ -95,9 +95,10 @@ const signatures = {
   addCloth:'options?',getClothMeshes:'',previewClothMotion:'options?, seconds?',applyClothMotion:'options?, cancellationOptions?',
   addCartoonCharacter:'options?',addFilledShape:'options?',
   getCharacterView:'',setCharacterView:'patch?',
+  addSpatialScene:'options?',previewSpatialSceneMotion:'options?, sampleTick?',applySpatialSceneMotion:'options?, cancellationOptions?',
 };
-const asynchronous = new Set(['insertInbetweenFramesAsync', 'bakeCameraMotion', 'bakeMovieclip','applyHumanMotion','applyClothMotion']);
-const signalArguments={insertInbetweenFramesAsync:2,bakeCameraMotion:0,applyHumanMotion:1,applyClothMotion:1};
+const asynchronous = new Set(['insertInbetweenFramesAsync', 'bakeCameraMotion', 'bakeMovieclip','applyHumanMotion','applyClothMotion','applySpatialSceneMotion']);
+const signalArguments={insertInbetweenFramesAsync:2,bakeCameraMotion:0,applyHumanMotion:1,applyClothMotion:1,applySpatialSceneMotion:1};
 const registry = new Map();
 for (const [category, names] of Object.entries(groups)) for (const method of names.trim().split(/\s+/)) {
   if (registry.has(method)) throw new Error(`Duplicate agent method: ${method}`);

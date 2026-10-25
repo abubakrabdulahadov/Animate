@@ -5,7 +5,8 @@ import {spatialCamera,projection,projectSpatial,unprojectSpatial} from './spatia
 import {spatialPoint,spatialQuaternion,quatMultiply,quatRotate,quaternionPose} from './rig-spatial.mjs';
 import {animationRotation} from './animation-origin.mjs';
 import {ikLayout,ikChain,solveObjectIK} from './ik.mjs';
-import {captureSpatialIK} from './ik-spatial.mjs';
+import {createSpatialLocomotion} from './spatial-locomotion.mjs';
+import {inverseQuaternion,captureSpatialIK} from './ik-spatial.mjs';
 
 const finite=(v,name,min,max)=>{if(!Number.isFinite(v)||v<min||v>max)throw new RangeError(`${name} must be between ${min} and ${max}.`);return v;};
 export const isSpatialCharacter=figure=>figure?._styk?.spatialCartoon===1;
@@ -100,6 +101,7 @@ export function spatialHumanMotion(figure,object,options,fps,planarFactory){
   const validateView=view=>{if(!view||typeof view!=='object'||Array.isArray(view))throw new Error('view must be an object.');for(const key of Object.keys(view))if(!['yaw','pitch','roll','headYaw','headPitch','orbitYaw','orbitPitch','perspective','distance'].includes(key))throw new Error(`Unknown orbit view: ${key}`);const {orbitYaw,orbitPitch,...native}=view;characterViewPose(figure,object,native);if(orbitYaw!==undefined)finite(orbitYaw,'orbitYaw',-Math.PI*4,Math.PI*4);if(orbitPitch!==undefined)finite(orbitPitch,'orbitPitch',-Math.PI/2+.05,Math.PI/2-.05);};
   if(options.view)validateView(options.view);if(options.viewTo)validateView(options.viewTo);
   const sourceView=characterView(figure,object),direction=Math.sign(options.distance??0)||1;
+  const turning=options.action==='turn';
   const moving=(options.action??'walk')==='walk'||options.action==='carry'&&Math.abs(options.distance??0)>1e-6;
   const base={...sourceView,yaw:moving?direction*Math.PI/2:sourceView.yaw,orbitYaw:0,orbitPitch:0,...options.view},end={...base,...options.viewTo};
   const ids=role=>roles.get(role).segment.segment_id,restAngles=[-Math.PI/2,-Math.PI/2,-Math.PI/2,1.12,1.3,2.02,1.84,1.3,1.52,1.84,1.62,0,0];
@@ -108,12 +110,13 @@ export function spatialHumanMotion(figure,object,options,fps,planarFactory){
     return {...s,parent_id:parent,angle_rad:restAngles[i],length:Math.hypot(...s._stykRig.spatial.tip.map((n,i)=>n-s._stykRig.spatial.origin[i])),_stykRig:undefined,...(role==='head'?{segment_type:'circle',segment_kind:'circleFill',primitive_code:3,flags:3}:{})};
   })],polyfills:[],image_assets:[],text_assets:[],_styk:{footSole:18}};
   const proxyObject=createObject(proxy,object.unique_id,object.root_x,object.root_y,{scale:object.scale}),{view,viewTo,cloth,...motionOptions}=options;
-  const planar=planarFactory(proxy,proxyObject,{...motionOptions,rig,cloth:false},fps);
+  const planar=planarFactory(proxy,proxyObject,{...motionOptions,...(turning?{action:'idle'}:{}),rig,cloth:false},fps);
   const reachSource=options.action==='reach'?planarFactory(proxy,proxyObject,{...motionOptions,action:'idle',rig,cloth:false},fps):null;
   const meshless={...figure,_styk:{...figure._styk,spatialMesh:undefined}};
-  const ik=reachSource?ikLayout(figure):null;
-  return {rig,settings:planar.settings,sample(tick){
+  const ik=ikLayout(figure),locomotion=createSpatialLocomotion(planar,base,end,{moving,turning,scale:object.scale,rootY:object.root_y});
+  return {rig,settings:{...planar.settings,action:turning?'turn':planar.settings.action},sample(tick){
     const sampled=planar.sample(tick),idleArms=reachSource?.sample(tick),u=tick/(planar.settings.duration-1),smooth=u*u*(3-2*u),v={};for(const key of Object.keys(base))v[key]=base[key]+(end[key]-base[key])*smooth;
+    Object.assign(v,locomotion.views(u));
     const pose=snapshotPoseObject(object),absolute=new Map([['model',0]]);pose.angles=object.angles.slice();pose.len_flag=0;pose.lengths=[];pose.bend_flag=0;pose.bends=[];
     for(const {segment,index}of roles.values()){pose.angles[index]=segment.angle_rad;pose.angles[indices.get(segment._stykRig.spatial.turn)]=0;pose.angles[indices.get(segment._stykRig.spatial.pitch)]=0;}
     for(const [i,role]of anatomy.entries()){
@@ -122,6 +125,7 @@ export function spatialHumanMotion(figure,object,options,fps,planarFactory){
       pose.angles[indices.get(source._stykRig.spatial.pitch)]=pitch-(absolute.get(parentRole)??0);
     }
     const model=roles.get('model').segment,head=roles.get('head').segment;
+    pose.angles[indices.get(roles.get('spine0').segment._stykRig.spatial.turn)]=v.torsoYaw;
     const cameraQ=quatMultiply(spatialQuaternion(0,0,-v.orbitPitch),spatialQuaternion(0,-v.orbitYaw,0));
     const orientation=quaternionPose(quatMultiply(cameraQ,spatialQuaternion(v.roll,v.yaw,v.pitch)),{bend:0,turn:v.yaw-v.orbitYaw,pitch:v.pitch-v.orbitPitch});
     for(const s of roles.values())pose.angles[s.index]+=orientation.bend;
@@ -129,12 +133,38 @@ export function spatialHumanMotion(figure,object,options,fps,planarFactory){
     pose.angles[indices.get(model._stykRig.spatial.pitch)]=orientation.pitch;
     pose.angles[indices.get(head._stykRig.spatial.turn)]=v.headYaw;
     pose.angles[indices.get(head._stykRig.spatial.pitch)]+=v.headPitch;
-    const travel=(sampled.pose.root_x-object.root_x)*direction,path=quatRotate(cameraQ,[travel*Math.sin(v.yaw),sampled.pose.root_y-object.root_y,travel*Math.cos(v.yaw)]),depth=path[2];
+    const footStates={},travel=locomotion.path(u),sway=(moving?sampled.support:0)*2*object.scale;
+    const world=[travel[0]+Math.cos(v.yaw)*sway,sampled.pose.root_y-object.root_y,travel[2]-Math.sin(v.yaw)*sway];
+    if(moving||turning)for(const side of ['left','right']){
+      const state=locomotion.foot(side,u);footStates[side]=state;
+      const hip=quatRotate(spatialQuaternion(v.roll,v.yaw,v.pitch),[(side==='left'?15:-15)*object.scale,0,0]);
+      const horizontal=Math.hypot(state.point[0]-world[0]-hip[0],state.point[2]-world[2]-hip[2]),reach=103*object.scale*.985;
+      if(horizontal>=reach)throw new RangeError('Turning stride exceeds leg reach; reduce step length or turn angle.');
+      world[1]=Math.max(world[1],state.point[1]-hip[1]-Math.sqrt(reach*reach-horizontal*horizontal));
+    }
+    const path=quatRotate(cameraQ,world),depth=path[2];
     const distance=Math.max(100,v.distance),denominator=1-v.perspective*depth/(distance*object.scale);if(denominator<.1)throw new RangeError('The orbit path approaches the camera; increase distance.');
     const scale=1/denominator;pose.scale=object.scale*scale;pose.root_x=object.root_x+path[0]*scale;pose.root_y=object.root_y+path[1]*scale;
     pose._stykSpatial={...pose._stykSpatial,camera:{strength:v.perspective,distance:Math.max(100,distance-depth/object.scale),centerX:object.root_x,centerY:object.root_y}};
     const geometry=()=>buildGeometry({version:5,figure_types:[meshless]},createFrame([{...pose,object_slot:0}])).objects.get(0);
     let g=geometry(),requestedReach;
+    if(moving||turning){
+      for(const side of ['left','right']){
+        const state=footStates[side];
+        const desired=quatRotate(cameraQ,state.point),raw=desired.map((n,i)=>(n-path[i])*scale);
+        const id=rig[`${side}Leg`][1],chain=ikChain(figure,id,2,ik),capture=captureSpatialIK(figure,pose,g,chain,[]);
+        const target={x:pose.root_x+raw[0],y:pose.root_y+raw[1],rotation:0};
+        const pole=quatRotate(cameraQ,[Math.sin(state.yaw),0,Math.cos(state.yaw)]);
+        const solved=solveObjectIK(figure,pose,g.root,ik,{[id]:{enabled:true,pinned:true,allowStretch:false,bendDirection:0,chainLength:2,followers:{},target,...capture,spatialTarget:{...capture.spatialTarget,depth:raw[2],pole}}},{includePoints:false});
+        if(solved){pose.angles=solved.angles;g=geometry();}
+        // A planted shoe retains its own heading instead of swivelling with the hips.
+        const foot=roles.get(`${side}Foot`),parent=g.segments[roles.get(`${side}Shin`).index].spatialFrame;
+        const local=quaternionPose(quatMultiply(inverseQuaternion(parent.q),quatMultiply(cameraQ,spatialQuaternion(0,state.yaw,0))),{bend:0,turn:0,pitch:0});
+        pose.angles[foot.index]=foot.segment.angle_rad+parent.authoredBend+local.bend;
+        pose.angles[indices.get(foot.segment._stykRig.spatial.turn)]=local.turn;
+        pose.angles[indices.get(foot.segment._stykRig.spatial.pitch)]=local.pitch;g=geometry();
+      }
+    }
     if(reachSource){
       const side=options.hand??'right',id=rig[`${side}Arm`][1],chain=ikChain(figure,id,2,ik),start=g.joints.get(id),seconds=tick/fps,duration=(planar.settings.duration-1)/fps;
       const x=Math.min(1,seconds/Math.max(.2,duration*.55)),amount=x*x*x*(x*(x*6-15)+10),weight=amount*sampled.weight;
@@ -150,8 +180,8 @@ export function spatialHumanMotion(figure,object,options,fps,planarFactory){
     for(const side of Object.keys(sampled.grips??{})){const p=g.joints.get(rig[`${side}Arm`][1]);grips[side]={x:p.x,y:p.y};}
     const contacts={};for(const side of ['left','right']){const role=`${side}Foot`,bone=roles.get(role),frame=g.segments[bone.index].spatialFrame,p=spatialPoint(frame,[side==='left'?15:-15,121,13]);
       const point=projectSpatial([pose.root_x+p[0]*pose.scale,pose.root_y+p[1]*pose.scale,p[2]*pose.scale],projection(pose,g.root));
-      const ankle=g.joints.get(rig[`${side}Leg`][1]);contacts[side]={...sampled.contacts[side],point:{x:point.x,y:point.y},ankle:{x:ankle.x,y:ankle.y}};
+      const ankle=g.joints.get(rig[`${side}Leg`][1]);contacts[side]={...sampled.contacts[side],...(footStates[side]?{planted:footStates[side].planted}:{}),point:{x:point.x,y:point.y},ankle:{x:ankle.x,y:ankle.y}};
     }
-    return {...sampled,pose,grips,contacts,targets,view:v};
+    return {...sampled,pose,grips,contacts,targets,view:v,worldRoot:world};
   }};
 }

@@ -40,8 +40,9 @@ remain available through existing methods. Shape/proportion edits can be posed
 manually, but the generated gait currently requires the original bone dimensions.
 
 Human motion accepts `view` and `viewTo` only for spatial cartoon characters.
-Both accept the native fields above plus `orbitYaw` and `orbitPitch`. All supplied
-view values interpolate over the generated range. Missing end fields retain the
+Both accept the native fields above plus `orbitYaw` and `orbitPitch`. Non-heading
+view values interpolate over the generated range. Heading takes the short angular
+path; gaze leads the shoulders, and the pelvis follows. Missing end fields retain the
 start value. A nonzero walk/carry distance defaults to a body heading along its
 travel direction; stationary actions retain the source orientation.
 
@@ -61,13 +62,25 @@ semantics matter; native pose channels retain the final projected orientation,
 not a second hidden camera/model state. Direct `setCharacterView` uses the
 object's native Euler orientation rather than a separate orbital scene camera.
 
+For a shared camera and true occlusion between several actors and solid scenery,
+use [Shared 3D scenes](SPATIAL-SCENES.md). The per-character view above remains
+available for independent figures.
+
 ## Grounding and motion
 
 The existing deterministic planar foot-planted sampler supplies gait timing,
 elbow/knee bend and upper-body coordination. Its sagittal motion is lifted into
 the character's native spatial rotations. Left/right shoulders and hips retain
-their lateral separation. Feet counter the shin rotation so shoes stay upright.
-Their mesh and ankle share one articulation; a shoe is not an independent sticker.
+their lateral separation. Native 3D leg IK holds each stance ankle at its
+world-space plant through curved
+travel and body turns, compensating pelvic weight shifts. Shoes retain their
+plant heading until the next step and stay level. Root travel follows the heading
+as an integrated curved path instead of rotating an already traveled distance.
+The shoe mesh and ankle share one articulation.
+
+`action:'turn'` turns in place toward `viewTo.yaw`, stepping each foot in turn
+while the gaze leads the shoulders and hips. Both feet settle at the final heading.
+It is a spatial-character action; ordinary planar rigs do not accept it.
 
 `groundY` places the **sole**, not the ankle, on the source ground plane. Generated
 2D characters now use a 15-unit sole offset and spatial ones use 18 units. Pose

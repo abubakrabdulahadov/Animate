@@ -111,7 +111,7 @@ export function createHumanMotion(figure,object,options={},fps=24) {
   const settings=motionOptions(options,legLength,fps);
   const walking=settings.action==='walk'||settings.action==='carry'&&Math.abs(settings.distance)>1e-6;
   const cloth=options.cloth===false?null:createClothDeformer(figure,options.cloth??{});
-  if(walking&&Math.abs(settings.distance)/(settings.stepLength*2)>settings.duration/12)throw new RangeError('Walking needs at least twelve frames per stride; increase duration or reduce distance.');
+  if(walking&&Math.ceil(Math.abs(settings.distance)/(settings.stepLength*2))>settings.duration/12)throw new RangeError('Walking needs at least twelve frames per stride; increase duration or reduce distance.');
   if(settings.duration*figure.segments.length>HUMAN_MOTION_LIMITS.boneSamples)throw new RangeError('Generate a shorter motion for this dense figure.');
   if(JSON.stringify(object).length*2*settings.duration>HUMAN_MOTION_LIMITS.poseBytes)throw new RangeError('Generate a shorter motion for this pose’s metadata size.');
   const managed=new Set(['leftArm','rightArm','leftLeg','rightLeg'].map(role=>rig[role][1]));
@@ -128,11 +128,13 @@ export function createHumanMotion(figure,object,options={},fps=24) {
   const sample=tick=>{
     finite(tick,'sample tick',0,settings.duration-1);
     const seconds=tick/fps,u=tick/(settings.duration-1),entry=ease(seconds/Math.max(.001,settings.blend)),weight=Math.min(entry,ease((durationSeconds-seconds)/Math.max(.001,settings.blend)));
-    const d=settings.distance*ease(u),cycle=Math.abs(d)/(settings.stepLength*2),phase=cycle*Math.PI*2;
+    // Finish complete strides so deceleration never leaves a foot suspended.
+    const strides=Math.ceil(Math.abs(settings.distance)/(settings.stepLength*2)),step=walking?Math.abs(settings.distance)/(2*strides):settings.stepLength;
+    const d=settings.distance*ease(u),cycle=walking?strides*ease(u):0,phase=cycle*Math.PI*2;
     const speedWeight=Math.sin(Math.PI*u)**2,breath=Math.sin(seconds*2*Math.PI*.32),motion=settings.intensity;
     const body= walking ? motion*speedWeight : motion*weight;
     const reachWeight=settings.action==='reach'?ease(seconds/Math.max(.2,durationSeconds*.55))*weight:0,reachDirection=Math.sign((settings.target?.x??root.x)-root.x)||1;
-    const x=root.x+d+(walking?0:legLength*.008*Math.sin(seconds*1.7)*weight*motion)-reachDirection*legLength*.012*reachWeight;
+    const x=root.x+d+(walking?legLength*.012*Math.sin(phase*2)*speedWeight*motion:0)+(walking?0:legLength*.008*Math.sin(seconds*1.7)*weight*motion)-reachDirection*legLength*.012*reachWeight;
     let y=walking?mix(root.y,ground-legLength*.91,weight)+legLength*.012*Math.cos(phase*2+.35)*body:root.y+legLength*.004*breath*body;
     const owned=new Map(),contacts={},targets={},grips={};
     const lean=(walking?direction*(.055+.025*Math.sin(phase-.35))*body:.012*breath*body)+reachDirection*.07*reachWeight;
@@ -150,7 +152,7 @@ export function createHumanMotion(figure,object,options={},fps=24) {
     const feet={};
     for(const side of ['left','right']){
       const offset=side===front?0:.5;
-      const q=cycle+offset,k=Math.floor(q),f=q-k,stance=f<=.62,swing=clamp((f-.62)/.38),step=settings.stepLength;
+      const q=cycle+offset,k=Math.floor(q),f=q-k,stance=f<=.62,swing=clamp((f-.62)/.38);
       let fx=restFeet[side].x+direction*2*step*k,fy=restFeet[side].y;
       if(walking){
         if(!stance)fx+=direction*2*step*ease(swing);
@@ -218,7 +220,8 @@ export function createHumanMotion(figure,object,options={},fps=24) {
     const velocity=settings.distance*30*u*u*(u-1)*(u-1)/durationSeconds;
     const draped=cloth?.meshes.length?cloth.apply(pose,seconds,{joints:baked,velocity:{x:velocity,y:0}}):pose;
     synchronizeAnimationOrigin(figure,draped);
-    return {pose:draped,contacts,targets,grips,phase:cycle,weight};
+    const support=walking?Math.cos(phase)*(front==='left'?1:-1)*body:0;
+    return {pose:draped,contacts,targets,grips,phase:cycle,weight,support};
   };
   return {rig,settings,legLength,root,ground:ground+sole,sample};
 }

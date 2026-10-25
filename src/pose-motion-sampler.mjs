@@ -1,8 +1,10 @@
+import {createSpatialSceneMotion} from './spatial-scene.mjs';
 import {createHumanMotion,HUMAN_MOTION_LIMITS} from './human-motion.mjs';
 import {createClothDeformer} from './cloth-motion.mjs';
 
 /** Shared preparation in the browser worker and cooperative Node runtime. */
 export function createPoseMotionSampler(input) {
+  if(input.kind==='spatialScene')return createSpatialSceneMotion(input.figure,input.object,input.options,input.fps);
   if(input.kind!=='cloth')return createHumanMotion(input.figure,input.object,input.options,input.fps);
   const {figure,poses,options,fps}=input;
   if(!Array.isArray(poses)||poses.length<2||poses.length>HUMAN_MOTION_LIMITS.frames||poses.length*figure.segments.length>HUMAN_MOTION_LIMITS.boneSamples)throw new RangeError('Cloth motion exceeds the pose preparation limit.');

@@ -267,3 +267,7 @@ native polygon artwork, outlined text, a PNG sprite and an embedded WAV, saves a
 reopens the project, exports PNG/SVG previews and both video containers, decodes
 the soundtrack to check audibility, and verifies a resized silent subrange.
 Artifacts are written under `artifacts/agent-tools-smoke/`.
+
+Shared 3D scenes can be created and animated with `editor_addSpatialScene`,
+`editor_previewSpatialSceneMotion` and `editor_applySpatialSceneMotion`; see
+[Shared 3D scenes](SPATIAL-SCENES.md) for world coordinates, cameras and limits.
