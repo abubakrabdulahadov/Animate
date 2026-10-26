@@ -69,7 +69,7 @@ available for independent figures.
 
 ## Grounding and motion
 
-The existing deterministic planar foot-planted sampler supplies gait timing,
+The existing deterministic planar foot-planted sampler supplies walk/run gait timing,
 elbow/knee bend and upper-body coordination. Its sagittal motion is lifted into
 the character's native spatial rotations. Left/right shoulders and hips retain
 their lateral separation. Native 3D leg IK holds each stance ankle at its
@@ -77,6 +77,8 @@ world-space plant through curved
 travel and body turns, compensating pelvic weight shifts. Shoes retain their
 plant heading until the next step and stay level. Root travel follows the heading
 as an integrated curved path instead of rotating an already traveled distance.
+Unloaded standing places the ankles beneath their native hip positions with
+near-straight knees, rather than inheriting the proxy rig’s splayed rest legs.
 The shoe mesh and ankle share one articulation.
 
 `action:'turn'` turns in place toward `viewTo.yaw`, stepping each foot in turn

@@ -137,7 +137,7 @@ export function createSpatialSceneMotion(figure,object,options={},fps=24){
    opt.carry={hand,forward,weight:Math.min(1,props.reduce((n,p)=>n+p.weight,0)),loadHeight:props[0].size[1],...original.carry};
    if(opt.action==='idle')opt.action='carry';
   }
-  if(factor!==1){opt.distance=(opt.distance??(opt.action==='walk'?206:0))*factor;if(factor===0&&opt.action==='walk')opt.action='idle';}
+  if(factor!==1){opt.distance=(opt.distance??(opt.action==='run'?515:opt.action==='walk'?206:0))*factor;if(factor===0&&['walk','run'].includes(opt.action)){if(opt.action==='run'){delete opt.armBend;delete opt.stepLength;}opt.action='idle';}}
   if(opt.view?.orbitYaw||opt.view?.orbitPitch||opt.viewTo?.orbitYaw||opt.viewTo?.orbitPitch||opt.view?.perspective||opt.viewTo?.perspective)throw new Error('Use the shared scene camera instead of per-actor orbit or perspective.');
   const source=createObject(a.figure,i+1,0,0);
   for(const [sourceId,targetId]of a.ids){const si=a.figure.segments.findIndex(s=>s.segment_id===sourceId),ti=index.get(targetId);source.angles[si]=object.angles[ti]-(a.figure.segments[si]._stykRig?.spatial?.origin?cameraBend:0);}

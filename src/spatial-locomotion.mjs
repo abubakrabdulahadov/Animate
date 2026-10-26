@@ -30,7 +30,7 @@ export function createSpatialLocomotion(planar,base,end,{moving=false,turning=fa
   // Use the planar sampler's actual leading leg, independent of rig record order.
   const f0=initial.contacts.left.ankle.x-initial.contacts.right.ankle.x;
   const leftFront=sign*f0>=0,phaseOffset=moving?(side===(leftFront?'left':'right')?0:.5):offset;
-  const q=(moving?sample.phase:turning?u:0)+phaseOffset,k=Math.floor(q),f=q-k,stance=f<=.62;
+  const q=(moving?sample.phase:turning?u:0)+phaseOffset,k=Math.floor(q),f=q-k,stanceDuration=sample.contacts[side].stanceDuration??.62,stance=f<=stanceDuration;
   const phaseAt=c=>moving?inverseEase(clamp(c/Math.max(1e-9,cycles))):clamp(c);
   const plant=c=>{
    const at=phaseAt(c),s=planar.sample(at*last),p=path(at),heading=views(at).yaw;
@@ -39,7 +39,7 @@ export function createSpatialLocomotion(planar,base,end,{moving=false,turning=fa
    const relative=quatRotate(spatialQuaternion(0,heading,0),[(side==='left'?15:-15)*scale,0,longitudinal]);
    return {point:[p[0]+relative[0],0, p[2]+relative[2]],yaw:heading};
   };
-  const start=plant(k-phaseOffset),finish=plant(k+1-phaseOffset),swing=ease((f-.62)/.38),t=stance?0:swing;
+  const start=plant(k-phaseOffset),finish=plant(k+1-phaseOffset),swing=ease((f-stanceDuration)/(1-stanceDuration)),t=stance?0:swing;
   const point=start.point.map((v,i)=>mix(v,finish.point[i],t));
   // Floor is independent of the pelvis's vertical bounce.
   point[1]=sample.contacts[side].ankle.y-rootY;

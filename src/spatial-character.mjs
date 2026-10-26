@@ -103,7 +103,8 @@ export function spatialHumanMotion(figure,object,options,fps,planarFactory){
   if(options.view)validateView(options.view);if(options.viewTo)validateView(options.viewTo);
   const sourceView=characterView(figure,object),direction=Math.sign(options.distance??0)||1;
   const turning=options.action==='turn';
-  const moving=(options.action??'walk')==='walk'||options.action==='carry'&&Math.abs(options.distance??0)>1e-6;
+  const moving=['walk','run'].includes(options.action??'walk')||options.action==='carry'&&Math.abs(options.distance??0)>1e-6;
+  const standing=!moving&&!turning&&options.action!=='putDown'&&!(options.carry?.weight>0);
   const base={...sourceView,yaw:moving?direction*Math.PI/2:sourceView.yaw,orbitYaw:0,orbitPitch:0,...options.view},end={...base,...options.viewTo};
   const ids=role=>roles.get(role).segment.segment_id,restAngles=[-Math.PI/2,-Math.PI/2,-Math.PI/2,1.12,1.3,2.02,1.84,1.3,1.52,1.84,1.62,0,0];
   const proxy={figure_type_id:figure.figure_type_id,name:figure.name,segments:[{...figure.segments[0],_stykRig:undefined},...anatomy.map((role,i)=>{
@@ -137,10 +138,11 @@ export function spatialHumanMotion(figure,object,options,fps,planarFactory){
     pose.angles[indices.get(head._stykRig.spatial.pitch)]+=v.headPitch;
     const footStates={},travel=locomotion.path(u),sway=(moving?sampled.support:0)*2*object.scale;
     const world=[travel[0]+Math.cos(v.yaw)*sway,sampled.pose.root_y-object.root_y,travel[2]-Math.sin(v.yaw)*sway];
-    if(moving||turning)for(const side of ['left','right']){
+    if(standing){const upright=planar.ground-object.root_y-(18+103*.9995)*object.scale;world[1]+=(upright-world[1])*sampled.entry;}
+    if(moving||turning||standing)for(const side of ['left','right']){
       const state=locomotion.foot(side,u);footStates[side]=state;
       const hip=quatRotate(spatialQuaternion(v.roll,v.yaw,v.pitch),[(side==='left'?15:-15)*object.scale,0,0]);
-      const horizontal=Math.hypot(state.point[0]-world[0]-hip[0],state.point[2]-world[2]-hip[2]),reach=103*object.scale*.985;
+      const horizontal=Math.hypot(state.point[0]-world[0]-hip[0],state.point[2]-world[2]-hip[2]),reach=103*object.scale*(standing?.9995:moving&&options.action!=='run'&&!(options.carry?.weight>0)?.995:.985);
       if(horizontal>=reach)throw new RangeError('Turning stride exceeds leg reach; reduce step length or turn angle.');
       world[1]=Math.max(world[1],state.point[1]-hip[1]-Math.sqrt(reach*reach-horizontal*horizontal));
     }
@@ -150,7 +152,7 @@ export function spatialHumanMotion(figure,object,options,fps,planarFactory){
     pose._stykSpatial={...pose._stykSpatial,camera:{strength:v.perspective,distance:Math.max(100,distance-depth/object.scale),centerX:object.root_x,centerY:object.root_y}};
     const geometry=()=>buildGeometry({version:5,figure_types:[meshless]},createFrame([{...pose,object_slot:0}])).objects.get(0);
     let g=geometry(),requestedReach;
-    if(moving||turning){
+    if(moving||turning||standing){
       for(const side of ['left','right']){
         const state=footStates[side];
         const desired=quatRotate(cameraQ,state.point),raw=desired.map((n,i)=>(n-path[i])*scale);

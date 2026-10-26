@@ -34,7 +34,7 @@ test('walk plants stance feet, clears the swing foot and preserves every bone le
       }
       g.segments.forEach((s,i)=>close(Math.hypot(s.end.x-s.start.x,s.end.y-s.start.y),f.segments[i].length));
     }
-    assert.ok(contacts>80);assert.ok(clearance>10);
+    assert.ok(contacts>80);assert.ok(clearance>motion.legLength*.01);assert.ok(clearance<=motion.legLength*.046,'Ordinary steps should skim the floor instead of marching.');
     close(motion.sample(0).pose.root_x,200);close(motion.sample(119).pose.root_x,200+distance);
     assert.deepEqual(motion.sample(30),motion.sample(30));
     const saved=motion.sample(70);motion.sample(5);assert.deepEqual(motion.sample(70),saved);

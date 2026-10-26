@@ -107,7 +107,7 @@ colors use native COLORREF. Use the typed style commands when possible.
 | `movieclips` | Create, enter/leave, edit playback, split, make unique, expand and bake nested animation. |
 | `audio` | Tracks, clips, timing, trims, fades, gains, mute/solo, splitting, duplication and clipboards. |
 | `history` | Existing undo and redo. |
-| `human` | Discover a humanoid rig, preview poses, and generate walking, breathing, waving, reaching or carrying. |
+| `human` | Discover a humanoid rig, preview poses, and generate walking, running, breathing, waving, reaching or carrying. |
 | `cloth` | Create dense editable scarves/capes/skirts, preview deformation, and bake cloth over existing motion. |
 | `cartoon` | Create filled 2D/3D characters, set body/head views and perspective, and create filled UI-style graphics. |
 

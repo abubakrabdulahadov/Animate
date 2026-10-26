@@ -1,6 +1,6 @@
 # Human motion
 
-The native `Editor` can generate coordinated walking, breathing, waving, reaching and carrying for an ordinary planar humanoid. It writes editable pose keys using the
+The native `Editor` can generate coordinated walking, running, breathing, waving, reaching and carrying for an ordinary planar humanoid. It writes editable pose keys using the
 existing document, IK solver and command history. It is available through the
 engine and agent API; there is no new toolbar or automatic alteration of existing
 animation.
@@ -30,6 +30,8 @@ characters also use this API through the [spatial adapter](SPATIAL-CHARACTERS.md
   it follows a smooth forward arc with clearance above the ground. Stride spacing
   shortens to finish whole strides, so stopping settles both feet onto the floor;
   the requested distance remains exact. The pelvis shifts gently with each support.
+- Ordinary walking uses low foot clearance, almost upright torso posture and a
+  higher pelvis; loaded carrying retains its separate crouch and lean.
 - The shared analytic two-link IK solver poses the legs. It preserves effective
   bone lengths; the pelvis lowers if needed to retain reach and avoid fully
   straight knees. Extra artwork inherits its parent bone's angle change.
@@ -37,7 +39,9 @@ characters also use this API through the [spatial adapter](SPATIAL-CHARACTERS.md
   straight with a slight forward elbow bend. Carrying keeps its separate supporting
   grip while the free arm relaxes, also when standing. Spine
   segments use offset phases, and the head compensates for torso inclination.
-- Idle poses keep the feet fixed while shifting weight and breathing gently.
+- Unloaded idle starts with near-straight knees, a quiet upright torso and feet
+  under the body. An explicit nonzero `blend` transitions from an authored stance;
+  contacts become planted when that repositioning finishes. Idle breathes gently.
   Waves ease into a raised arm, wave beside the head, then settle. Reaches arc
   toward a target with a small torso lean and pelvic counterbalance.
 
@@ -50,14 +54,14 @@ The implementation uses StykAnimate's existing solver and native pose semantics.
 
 | Field | Meaning |
 | --- | --- |
-| `action` | `walk` (default), `idle`, `wave`, `reach`, `carry`, `putDown`; spatial cartoon characters also accept `turn`. |
+| `action` | `walk` (default), `run`, `idle`, `wave`, `reach`, `carry`, `putDown`; spatial cartoon characters also accept `turn`. |
 | `start` | Zero-based tick; defaults to the playhead. A start beyond the tail uses the last visible pose. |
 | `duration` | Number of output ticks, 2–2400; default is approximately two seconds at the document FPS. |
-| `distance` | Signed scene-pixel travel for `walk`; default is twice the shorter leg's reach. Other actions use zero. |
-| `stepLength` | Maximum scene-pixel stride spacing, 12%–55% of the shorter leg length; default 48%. Actual spacing shortens to complete the final stride. |
+| `distance` | Signed scene-pixel travel for walk/run/carry; defaults to twice leg reach for walk and five times for run. Standing actions use zero. |
+| `stepLength` | Maximum scene-pixel step spacing, 12%–55% of leg length for walking (default 48%), up to 85% for running (default 65%). Actual spacing shortens to complete the final stride. |
 | `groundY` | World-space floor height; default is the lower sole height (the ankle for ordinary stick rigs). An explicit height places the character on that floor. |
 | `intensity` | 0–1.5, default 1; secondary motion strength. |
-| `blend` | Seconds of soft entrance/settling, 0–2; default 0.25. Walk contacts are not marked planted during the initial pose transition. |
+| `blend` | Seconds of soft entrance/settling, 0–2; default 0.25; unloaded idle defaults to zero for an immediately upright stance. Locomotion contacts are not marked planted during the initial pose transition. |
 | `hand` | `left` or `right` for wave/reach, default `right`; refers to rig roles. |
 | `target` | Required world-space `{x,y}` for reach. Targets outside arm reach stop at the limb's reach without stretching. |
 | `after` | `hold` (default) keeps the generated final pose until a later existing key. `restore` adds the original pose at the exclusive end when the original animation continues. |
@@ -65,7 +69,7 @@ The implementation uses StykAnimate's existing solver and native pose semantics.
 | `carry` | `{hand:'left'\|'right'\|'both', forward?, height?, weight?, loadHeight?}` keeps a carrying grip during walk/idle; fractions default to .45/.32 of arm reach. |
 | `cloth` | Cloth motion settings, or `false` to keep attached cloth rigid; see [Cloth motion](CLOTH-MOTION.md). |
 | `view`, `viewTo` | Spatial cartoon character body/head and orbital view endpoints; see [Spatial characters](SPATIAL-CHARACTERS.md). |
-| `armBend` | Empty-arm elbow flex in radians, 0–0.35; defaults to 0.1 (about 6°). Zero keeps the arm straight. Applies to walk/carry free arms in 2D and spatial characters. |
+| `armBend` | Empty-arm elbow flex in radians, 0–0.35 for walk/idle/carry (default 0.1, about 6°), 0–1.8 for run (default 1.35). Zero keeps the arm straight. Applies to walk/run/carry free arms in 2D and spatial characters. |
 
 `action:'carry'` provides a carrying pose, optionally with `distance` for walking.
 It also accepts `hand:'both'`. Carrying selects the lower elbow solution, so the
@@ -92,7 +96,7 @@ Targets outside physical reach retain a residual; a scene refuses to release a
 box if its hands cannot bring the base to the floor without stretching.
 
 Motion is sampled once per output tick. Walking requires at least twelve samples
-per complete stride; increase duration for a longer distance. Preview returns the
+per complete stride and running at least eight; increase duration for a longer distance. Preview returns the
 pose, foot contacts, target errors, normalized phase and transition weight without
 modifying the document. Planted contact points are constraints; reach targets can
 have a reported residual when unreachable.
@@ -176,3 +180,28 @@ uses the existing local backend test host. The smoke script exports an 18-second
 comparison and gesture demo, plus an editable STYK project and decoded contact
 sheet, to `artifacts/human-motion/`. It requires Chromium, FFmpeg and FFprobe.
 Reported timings describe the named fixture and machine only.
+
+## Running
+
+Use `action:'run'` through the same preview, worker, agent and baking APIs:
+
+```js
+await editor.applyHumanMotion({
+  action:'run',start:0,duration:120,distance:500
+});
+```
+
+Running has a shorter support phase, genuine flight intervals, higher foot
+clearance, a forward torso lean and bent-arm counter-swing. The contact report
+includes foot `phase`, `stanceDuration` and `planted`; sample `airborne` is true
+only when both unplanted feet clear the floor after the entry transition.
+Support lengthens near acceleration/deceleration to finish with grounded feet.
+Distance drives cadence, both directions work, and native lengths remain fixed.
+Increasing the default travel gives a faster run; explicit distance and duration
+still control actual speed. `intensity:0` retains minimum running clearance so
+flight is not reported for two grounded feet. Straight arms remain available
+with `armBend:0`.
+
+Built-in spatial cartoons and shared 3D scenes use the same gait timing and
+world-space plants. Shared-scene contact stopping also supports running. Existing
+baked animations are unchanged; generate a new range to use these adjustments.

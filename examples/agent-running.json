@@ -1,0 +1,10 @@
+{
+  "version":1,
+  "name":"Native running motion",
+  "commands":[
+    {"op":"project","width":960,"height":540,"fps":24},
+    {"op":"call","method":"addCartoonCharacter","args":[{"dimension":"3d","position":{"x":250,"y":330}}]},
+    {"op":"call","method":"applyHumanMotion","args":[{"action":"run","duration":120,"distance":450,"groundY":480,"view":{"yaw":1.5707963267948966}}]}
+  ],
+  "output":"agent-running.styk"
+}

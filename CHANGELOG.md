@@ -12,7 +12,7 @@ What's new in each version of StykAnimate.
 - Animate several 3D characters and solid scenery with a shared moving camera, directional light and soft ground shadows.
 - Carry weighted loads, set them on the floor, and stop generated 3D movement before obstacles or other characters.
 - Create finely jointed scarves, capes and skirts with adjustable density, editable draping motion and optional body contact.
-- Generate editable walking, breathing, waving, reaching and natural carrying motions for 2D characters.
+- Generate editable walking, running, breathing, waving, reaching and natural carrying motions for 2D and supported 3D characters.
 - Create shapes and animations with scripts or AI agents, save editable projects, and export previews or MP4/WebM videos with sound without opening the app.
 - StykAnimate is now open source: its code is on GitHub under the GPL-3.0 license.
 - Everyday Props · Pivot 3D: 30 editable everyday objects with working hinges and wheels for your animations.
@@ -31,7 +31,7 @@ What's new in each version of StykAnimate.
 
 ### Fixed
 
-- Walking characters settle both feet when stopping, keep their footing through 3D turns, and relax empty arms with a slight forward elbow bend.
+- Unloaded characters stand straighter and walk with less knee bending and body bobbing, while keeping their feet planted and empty arms relaxed.
 - New cartoon characters keep their shoes at the feet and plant the soles when walking.
 - Fixed an error when deleting your last color palette.
 

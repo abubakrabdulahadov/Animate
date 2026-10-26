@@ -41,7 +41,7 @@ An optional `camera` sets the initial view on creation.
 `applySpatialSceneMotion` accepts `start`, `duration`, `after`, `actors`, `camera`,
 `cameraTo`, `cameraPath`, `collisions`, `lighting`, `lightingTo`. Actor entries follow creation order and use ordinary
 [human motion options](HUMAN-MOTION.md), including spatial `view`/`viewTo` headings
-and `action:'turn'`. Omitted entries stand idle. Later ranges start from the saved actor world positions and camera view at that
+and `action:'turn'` or `action:'run'`. Omitted entries stand idle. Later ranges start from the saved actor world positions and camera view at that
 range’s start; omitted camera fields retain that view. One common duration and timeline
 range applies to the entire scene. Per-actor orbit and perspective are rejected:
 use the common camera instead. Per-actor ground heights are relative to that
