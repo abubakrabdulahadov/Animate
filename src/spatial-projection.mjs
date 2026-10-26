@@ -1,3 +1,4 @@
+import {spatialLight,interpolateLight} from './spatial-light.mjs';
 import {messageError} from './localized-error.mjs';
 /** Perspective is a final projection of the existing spatial pose. IK targets
  * remain in scene coordinates, before projection, in every saved document. */
@@ -53,8 +54,9 @@ export function validateSpatialPose(object, figure) {
   const state=object._stykSpatial;if(state===undefined)return;
   const record=v=>v&&typeof v==='object'&&!Array.isArray(v);
   const number=(v,min,max)=>Number.isFinite(v)&&v>=min&&v<=max;
-  if(!record(state)||Object.keys(state).some(k=>!['camera','shape'].includes(k)))throw messageError(new Error(''), "errors.spatialProjection.invalidSpatialPoseSettings", {});
+  if(!record(state)||Object.keys(state).some(k=>!['camera','shape','light'].includes(k)))throw messageError(new Error(''), "errors.spatialProjection.invalidSpatialPoseSettings", {});
   if(state.camera!==undefined){const c=state.camera;if(!record(c)||Object.keys(c).some(k=>!['strength','distance','centerX','centerY'].includes(k))||!number(c.strength,0,1)||!number(c.distance,10,100000)||['centerX','centerY'].some(k=>c[k]!==undefined&&!number(c[k],-1e7,1e7)))throw messageError(new Error(''), "errors.spatialProjection.perspectiveNeedsStrength01AndDistance10", {});}
+  if(state.light!==undefined)spatialLight(state.light);
   if(state.shape!==undefined){
     if(!record(state.shape)||Object.keys(state.shape).length>figure.segments.length)throw messageError(new Error(''), "errors.spatialProjection.invalidSpatialProportions", {});
     const bones=new Set(figure.segments.filter(s=>s._stykRig?.spatial?.origin).map(s=>s.segment_id));
@@ -66,5 +68,6 @@ export function interpolateSpatialPose(a,b,t) {
   for(const id of new Set([...Object.keys(a._stykSpatial?.shape??{}),...Object.keys(b._stykSpatial?.shape??{})])){
     const x=spatialShape(a,id),y=spatialShape(b,id);shape[id]={width:lerp(x.width,y.width,.1,5),taper:lerp(x.taper,y.taper,-.9,3)};
   }
-  return {camera:{strength:lerp(ca.strength,cb.strength,0,1),distance:lerp(ca.distance,cb.distance,10,100000),centerX:lerp(ca.centerX,cb.centerX),centerY:lerp(ca.centerY,cb.centerY)},...(Object.keys(shape).length?{shape}:{})};
+  const light=interpolateLight(a._stykSpatial?.light,b._stykSpatial?.light,t);
+  return {...(light?{light}:{}),camera:{strength:lerp(ca.strength,cb.strength,0,1),distance:lerp(ca.distance,cb.distance,10,100000),centerX:lerp(ca.centerX,cb.centerX),centerY:lerp(ca.centerY,cb.centerY)},...(Object.keys(shape).length?{shape}:{})};
 }

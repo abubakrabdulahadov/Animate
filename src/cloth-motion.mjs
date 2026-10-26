@@ -63,9 +63,16 @@ export function clothMeshes(figure) {
 
 /** Deterministic stylized drape/flutter, rather than stateful collision physics. */
 export function createClothDeformer(figure,options={}) {
-  keys(options,['wind','flutter','sag','lag','frequency']);
+  keys(options,['wind','flutter','sag','lag','frequency','collisions']);
   const wind=options.wind??{x:12,y:0};keys(wind,['x','y']);finite(wind.x,'wind.x',-200,200);finite(wind.y,'wind.y',-200,200);
   const flutter=finite(options.flutter??4,'flutter',0,50),sag=finite(options.sag??8,'sag',0,100),lag=finite(options.lag??.035,'lag',0,.2),frequency=finite(options.frequency??1.6,'frequency',0,8);
+  const collision=options.collisions??false;
+  if(collision!==false&&collision!==true)keys(collision,['handles','radius']);
+  const body=new Map(figure.segments.map(s=>[s.segment_id,s]));
+  let handles=collision&&collision!==true?collision.handles:undefined;
+  if(collision&&!handles){const head=figure.segments.find(s=>!s._stykCloth&&s.segment_type==='circle');handles=[];let id=head?.parent_id;while(id&&handles.length<8&&!handles.includes(id)){handles.push(id);id=body.get(id)?.parent_id;}}
+  if(collision&&(!Array.isArray(handles)||!handles.length||handles.length>32||new Set(handles).size!==handles.length||handles.some(id=>!Number.isInteger(id)||!body.has(id)||body.get(id)._stykCloth||body.get(id).segment_type!=='line')))throw new Error('Cloth contacts need 1–32 distinct ordinary body bone handles.');
+  const radius=collision?finite(collision.radius??12,'cloth contact radius',.1,200):0;
   const meshes=clothMeshes(figure);
   if(meshes.length&& (figure.segments.some(s=>s._stykRig)||figure._styk?.animationOrigin))throw new Error('Cloth currently needs an ordinary planar figure.');
   const apply=(input,time,{velocity={x:0,y:0},joints}={})=>{
@@ -73,9 +80,18 @@ export function createClothDeformer(figure,options={}) {
     const pose=snapshotPoseObject(input);if(!meshes.length)return pose;
     if(input.join||!Number.isFinite(input.scale)||input.scale<=0)throw new Error('Cloth baking needs an independent, positively scaled figure.');
     if(meshes.some(m=>m.nodes.some(n=>input._stykIK?.[n.id]?.enabled)))throw new Error('Disable IK on cloth control handles before baking.');
-    if(time===0)return pose;
+    if(time===0&&!collision)return pose;
     const points=joints??buildGeometry({version:5,figure_types:[figure]},createFrame([{...input,object_slot:0}])).objects.get(0).joints;
     const scale=input.scale,entry=1-Math.exp(-time*5);
+    const capsules=collision?handles.map(id=>({a:body.get(id).parent_id?points.get(body.get(id).parent_id):{x:input.root_x,y:input.root_y},b:points.get(id),radius:radius*scale})):[];
+    const closest=(p,c)=>{const dx=c.b.x-c.a.x,dy=c.b.y-c.a.y,den=dx*dx+dy*dy,t=den?Math.max(0,Math.min(1,((p.x-c.a.x)*dx+(p.y-c.a.y)*dy)/den)):0;return {x:c.a.x+dx*t,y:c.a.y+dy*t};};
+    const resolve=(p,rest)=>{
+      for(let pass=0;pass<8;pass++){let changed=false;for(const capsule of capsules){const center=closest(p,capsule),origin=closest(rest,capsule),rx=rest.x-origin.x,ry=rest.y-origin.y,dx=p.x-center.x,dy=p.y-center.y,distance=Math.hypot(dx,dy),crossed=rx*dx+ry*dy<0;
+        if(distance>=capsule.radius&&!crossed)continue;
+        let nx=rx,ny=ry,n=Math.hypot(nx,ny);if(n<1e-8){nx=capsule.b.y-capsule.a.y;ny=capsule.a.x-capsule.b.x;n=Math.hypot(nx,ny)||1;}p={x:center.x+nx/n*(capsule.radius+1e-5),y:center.y+ny/n*(capsule.radius+1e-5)};changed=true;
+      }if(!changed)return p;}
+      if(capsules.some(c=>{const a=closest(p,c);return Math.hypot(p.x-a.x,p.y-a.y)<c.radius-1e-4;}))throw new Error('Cloth cannot clear these body contacts; reduce the radius or adjust its attachment.');return p;
+    };
     pose.len_flag=1;pose.lengths=figure.segments.map((s,i)=>input.len_flag?input.lengths[i]:input.runtime_segments?.[i]?.length??s.length);
     for(const mesh of meshes){
       const anchor=mesh.anchorId===0?{x:input.root_x,y:input.root_y}:points.get(mesh.anchorId);
@@ -90,7 +106,7 @@ export function createClothDeformer(figure,options={}) {
         const wave=flutter*oscillation*Math.sin(v*Math.PI/2)*(.6+.4*Math.sin(u*Math.PI));
         const tip=points.get(node.id),dx=(wind.x*free-Math.max(-200,Math.min(200,velocity.x))*lag*free)*entry*scale;
         const dy=(wind.y+sag-Math.max(-200,Math.min(200,velocity.y))*lag)*free*entry*scale;
-        const x=tip.x+dx+nx*wave*scale,y=tip.y+dy+ny*wave*scale;
+        const corrected=resolve({x:tip.x+dx+nx*wave*scale,y:tip.y+dy+ny*wave*scale},tip),{x,y}=corrected;
         pose.angles[node.index]=Math.atan2(y-anchor.y,x-anchor.x);pose.lengths[node.index]=Math.hypot(x-anchor.x,y-anchor.y)/scale;
       }
     }

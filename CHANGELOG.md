@@ -9,8 +9,9 @@ What's new in each version of StykAnimate.
 ### Added
 
 - Create full-color 2D and 3D cartoon characters with body and head turning, plus rounded panels, buttons, badges and speech bubbles.
-- Animate several 3D characters and solid scenery together with a shared moving camera and natural overlap.
-- Create finely jointed scarves, capes and skirts with adjustable density and editable wind and draping motion.
+- Animate several 3D characters and solid scenery with a shared moving camera, directional light and soft ground shadows.
+- Carry weighted loads, set them on the floor, and stop generated 3D movement before obstacles or other characters.
+- Create finely jointed scarves, capes and skirts with adjustable density, editable draping motion and optional body contact.
 - Generate editable walking, breathing, waving, reaching and natural carrying motions for 2D characters.
 - Create shapes and animations with scripts or AI agents, save editable projects, and export previews or MP4/WebM videos with sound without opening the app.
 - StykAnimate is now open source: its code is on GitHub under the GPL-3.0 license.

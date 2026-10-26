@@ -5,6 +5,7 @@ import {spatialCamera,projection,projectSpatial,unprojectSpatial} from './spatia
 import {spatialPoint,spatialQuaternion,quatMultiply,quatRotate,quaternionPose} from './rig-spatial.mjs';
 import {animationRotation} from './animation-origin.mjs';
 import {ikLayout,ikChain,solveObjectIK} from './ik.mjs';
+import {torsoContact} from './spatial-contacts.mjs';
 import {createSpatialLocomotion} from './spatial-locomotion.mjs';
 import {inverseQuaternion,captureSpatialIK} from './ik-spatial.mjs';
 
@@ -109,12 +110,13 @@ export function spatialHumanMotion(figure,object,options,fps,planarFactory){
     const s=roles.get(role).segment,parent=[0,ids('spine0'),ids('spine1'),ids('spine1'),ids('leftUpperArm'),ids('spine1'),ids('rightUpperArm'),0,ids('leftThigh'),0,ids('rightThigh'),ids('leftShin'),ids('rightShin')][i];
     return {...s,parent_id:parent,angle_rad:restAngles[i],length:Math.hypot(...s._stykRig.spatial.tip.map((n,i)=>n-s._stykRig.spatial.origin[i])),_stykRig:undefined,...(role==='head'?{segment_type:'circle',segment_kind:'circleFill',primitive_code:3,flags:3}:{})};
   })],polyfills:[],image_assets:[],text_assets:[],_styk:{footSole:18}};
-  const proxyObject=createObject(proxy,object.unique_id,object.root_x,object.root_y,{scale:object.scale}),{view,viewTo,cloth,...motionOptions}=options;
+  const proxyObject=createObject(proxy,object.unique_id,object.root_x,object.root_y,{scale:object.scale}),{view,viewTo,cloth,collisions=options.action!=='reach',...motionOptions}=options;
+  if(typeof collisions!=='boolean')throw new TypeError('Character collisions must be true or false.');
   const planar=planarFactory(proxy,proxyObject,{...motionOptions,...(turning?{action:'idle'}:{}),rig,cloth:false},fps);
   const reachSource=options.action==='reach'?planarFactory(proxy,proxyObject,{...motionOptions,action:'idle',rig,cloth:false},fps):null;
   const meshless={...figure,_styk:{...figure._styk,spatialMesh:undefined}};
   const ik=ikLayout(figure),locomotion=createSpatialLocomotion(planar,base,end,{moving,turning,scale:object.scale,rootY:object.root_y});
-  return {rig,settings:{...planar.settings,action:turning?'turn':planar.settings.action},sample(tick){
+  return {rig,pathAt:tick=>locomotion.path(tick/(planar.settings.duration-1)),settings:{...planar.settings,action:turning?'turn':planar.settings.action},sample(tick){
     const sampled=planar.sample(tick),idleArms=reachSource?.sample(tick),u=tick/(planar.settings.duration-1),smooth=u*u*(3-2*u),v={};for(const key of Object.keys(base))v[key]=base[key]+(end[key]-base[key])*smooth;
     Object.assign(v,locomotion.views(u));
     const pose=snapshotPoseObject(object),absolute=new Map([['model',0]]);pose.angles=object.angles.slice();pose.len_flag=0;pose.lengths=[];pose.bend_flag=0;pose.bends=[];
@@ -173,15 +175,41 @@ export function spatialHumanMotion(figure,object,options,fps,planarFactory){
       const solved=solveObjectIK(figure,pose,g.root,ik,{[id]:{enabled:true,pinned:true,allowStretch:false,bendDirection:0,chainLength:2,followers:{},target:{...target,rotation:0},...capture}},{includePoints:false});
       if(solved){pose.angles=solved.angles;if(solved.lengths){pose.len_flag=1;pose.lengths=solved.lengths;}g=geometry();}
     }
+    if(options.action==='putDown'&&sampled.load.lowering>0)for(const side of Object.keys(sampled.grips)){
+      const id=rig[`${side}Arm`][1],chain=ikChain(figure,id,2,ik),bone=roles.get(`${side}Forearm`),p=spatialPoint(g.segments[bone.index].spatialFrame,bone.segment._stykRig.spatial.tip);
+      const current=quatRotate(inverseQuaternion(cameraQ),p.map(n=>n*object.scale)).map((n,i)=>n+world[i]);
+      current[1]+=(planar.ground-object.root_y-(options.carry?.loadHeight??planar.legLength*.4)-current[1])*sampled.load.lowering;
+      const desired=quatRotate(cameraQ,current),raw=desired.map((n,i)=>(n-path[i])*scale),target={x:pose.root_x+raw[0],y:pose.root_y+raw[1],rotation:0},capture=captureSpatialIK(figure,pose,g,chain,[]);
+      const solved=solveObjectIK(figure,pose,g.root,ik,{[id]:{enabled:true,pinned:true,allowStretch:false,bendDirection:0,chainLength:2,followers:{},target,...capture,spatialTarget:{...capture.spatialTarget,depth:raw[2]}}},{includePoints:false});
+      if(solved){pose.angles=solved.angles;g=geometry();}
+    }
+    const corrections=[];
+    if(collisions&&(options.action==='reach'||sampled.load?.weight>0||options.action==='putDown'))for(const side of ['left','right']){
+      const role=`${side}Arm`,id=rig[role][1],chain=ikChain(figure,id,2,ik),torso=g.segments[roles.get('spine0').index].spatialFrame;
+      const points=()=>chain.map(i=>spatialPoint(g.segments[i].spatialFrame,figure.segments[i]._stykRig.spatial.tip));
+      let [elbow,wrist]=points(),contact=torsoContact(elbow,wrist,torso);
+      if(!contact.penetrating)continue;
+      const requested=wrist.slice(),sign=side==='left'?1:-1;
+      for(let attempt=0;attempt<4&&contact.penetrating;attempt++){
+        const local=contact.local.slice();local[2]=Math.max(local[2],28+attempt*5);if(attempt>1)local[0]=sign*Math.max(Math.abs(local[0]),32);
+        const p=contact.world(local),target={x:pose.root_x+p[0]*pose.scale,y:pose.root_y+p[1]*pose.scale,rotation:0},capture=captureSpatialIK(figure,pose,g,chain,[]),pole=quatRotate(torso.q,[sign,1,.5]),norm=Math.hypot(...pole);
+        const solved=solveObjectIK(figure,pose,g.root,ik,{[id]:{enabled:true,pinned:true,allowStretch:false,bendDirection:0,chainLength:2,followers:{},target,...capture,spatialTarget:{...capture.spatialTarget,depth:p[2]*pose.scale,pole:pole.map(v=>v/norm)}}},{includePoints:false});
+        if(solved){pose.angles=solved.angles;g=geometry();}[elbow,wrist]=points();contact=torsoContact(elbow,wrist,torso);
+      }
+      if(contact.penetrating)throw new Error('The arm cannot clear the torso without stretching; move the target forward.');
+      corrections.push({kind:'torso',hand:side,requested,actual:wrist.slice()});
+    }
     const grips={},targets={};for(const [role,chain]of Object.entries({leftArm:rig.leftArm,rightArm:rig.rightArm,leftLeg:rig.leftLeg,rightLeg:rig.rightLeg})){
       const p=g.joints.get(chain[1]),actual={x:p.x,y:p.y},requested=requestedReach&&role===`${options.hand??'right'}Arm`?requestedReach:actual;
       targets[role]={actual,requested:{...requested},error:Math.hypot(actual.x-requested.x,actual.y-requested.y)};
     }
     for(const side of Object.keys(sampled.grips??{})){const p=g.joints.get(rig[`${side}Arm`][1]);grips[side]={x:p.x,y:p.y};}
-    const contacts={};for(const side of ['left','right']){const role=`${side}Foot`,bone=roles.get(role),frame=g.segments[bone.index].spatialFrame,p=spatialPoint(frame,[side==='left'?15:-15,121,13]);
+    const worldGrips={};for(const side of Object.keys(grips)){const bone=roles.get(`${side}Forearm`),p=spatialPoint(g.segments[bone.index].spatialFrame,bone.segment._stykRig.spatial.tip),local=quatRotate(inverseQuaternion(cameraQ),p.map(n=>n*object.scale));worldGrips[side]=local.map((n,i)=>n+world[i]);}
+    const worldFeet={},contacts={};for(const side of ['left','right']){const role=`${side}Foot`,bone=roles.get(role),frame=g.segments[bone.index].spatialFrame,p=spatialPoint(frame,[side==='left'?15:-15,121,13]);
       const point=projectSpatial([pose.root_x+p[0]*pose.scale,pose.root_y+p[1]*pose.scale,p[2]*pose.scale],projection(pose,g.root));
+      const local=quatRotate(inverseQuaternion(cameraQ),p.map(n=>n*object.scale));worldFeet[side]=local.map((n,i)=>n+world[i]);
       const ankle=g.joints.get(rig[`${side}Leg`][1]);contacts[side]={...sampled.contacts[side],...(footStates[side]?{planted:footStates[side].planted}:{}),point:{x:point.x,y:point.y},ankle:{x:ankle.x,y:ankle.y}};
     }
-    return {...sampled,pose,grips,contacts,targets,view:v,worldRoot:world};
+    return {...sampled,pose,grips,contacts,targets,view:v,worldRoot:world,worldGrips,worldFeet,collisions:corrections};
   }};
 }

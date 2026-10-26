@@ -65,11 +65,11 @@ as human motion. Saving/reopening and normal exports keep the baked result.
 cloth or a later standalone cloth bake; repeated baking adds deformation to the
 already baked source. For a different result, undo the cloth bake first.
 
-The deformation is deterministic stylized drape/flutter, not a collision or
-mass/spring simulation. It keeps the top row fixed, progressively releases the
+The deformation is deterministic stylized drape/flutter with optional planar
+body constraints, not a mass/spring simulation. It keeps the top row fixed, progressively releases the
 free end, adds world-space wind/sag, bends across the cloth's length and lets
-movement lag behind the figure's root velocity. It does not simulate body/ground
-collision, tearing, garment sewing, self-collision or 3D cloth. Very strong wind
+movement lag behind the figure's root velocity. Optional body capsules constrain free nodes. It does not simulate ground contact,
+tearing, garment sewing, cloth self-collision or 3D cloth. Very strong wind
 or manually folded controls can overlap. Keep broad clothing clear of the body
 through authored pose, offsets and painter order.
 
@@ -80,6 +80,7 @@ through authored pose, offsets and painter order.
 | `sag` | Downward drape, 0–100 figure units. |
 | `lag` | Root-velocity response in seconds, 0–0.2. |
 | `frequency` | Wave cycles per second, 0–8. |
+| `collisions` | `false` (default), `true` for automatic torso bones, or `{handles:[1],radius:12}` for explicit body capsules. |
 
 Preview without editing with `previewClothMotion(settings, seconds)`; inspect
 meshes with `getClothMeshes()`. Agent tools are `editor_addCloth`,
@@ -103,3 +104,31 @@ roundtrip, cancellation and tools. `node tests/cloth-motion.browser.mjs` checks
 actual workers/disposal, renders cloth with carrying poses, and samples opaque
 triangle interiors to detect cracks in the exported image. It uses the existing
 backend test host and Chromium with its GPU disabled.
+
+## Planar body contacts
+
+Use `cloth:{collisions:{handles:[spineHandleId],radius:29}}` with human or standalone
+cloth baking to keep free nodes outside the specified body capsules. Radius is in
+figure units (.1–200); scale and current body poses are respected. `true` follows
+the ordinary torso chain below the head with a 12-unit radius. Nonhumanoid props
+can supply up to 32 explicit ordinary line-bone IDs. Invalid handles reject before
+publication.
+
+Nodes retain their authored side under strong wind, preventing a large displacement
+from carrying them straight across the body. The first row stays pinned, and only
+cloth angles/lengths change. Resolution is bounded and deterministic; incompatible
+capsules reject the bake rather than publishing an intersecting partial result.
+Zero-time contact samples can correct free nodes while retaining attachment pins.
+
+These are 2D node constraints. Painter order still defines front/back overlap;
+cloth triangles, sewing, full garment volume and 3D cloth are not simulated.
+They are opt-in because a cape behind a torso may correctly overlap its projection.
+`tests/cloth-contacts.test.mjs` covers strong wind, pinned attachments, unchanged
+body poses, history and invalid settings. The weighted-scene browser test exports
+both unconstrained and constrained filled-character examples.
+
+A local macOS ARM64 / Node 24.11.0 workload with 1,677 cloth nodes and 60 frames,
+three runs per setting, measured median preparation times of 73 ms without
+contacts and 92 ms with one body capsule. This measures CPU deformation only,
+not drawing or GPU performance. Raw runs and the repeatable workload are in
+`artifacts/weighted-scene/cloth-benchmark.json` and `cloth-benchmark.mjs`.

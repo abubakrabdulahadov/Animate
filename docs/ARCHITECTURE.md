@@ -48,6 +48,16 @@ slide joints for world translations and a common camera articulation. Scene
 motion uses the same bounded pose preparation/publication path; playback and
 exports need no new evaluator or scene state. See [Shared 3D scenes](SPATIAL-SCENES.md).
 
+`spatial-contacts.mjs` owns small analytic torso and box-sweep constraints;
+loaded human poses and shared scene preparation reuse native IK and shorten
+blocked travel before publication. Held boxes use existing translation slides
+and a native release control. Planar cloth optionally resolves its free nodes
+against explicit or detected body capsules without altering body channels. `spatial-light.mjs` owns validated directional
+light values and interpolation; the existing mesh evaluator derives bounded
+face tones before projection, shared by every painter. Ground-shadow ellipses
+are ordinary articulated mesh geometry and palette overrides, not a separate
+render pass or persistent simulation. See [Shared 3D scenes](SPATIAL-SCENES.md).
+
 ## Document and commands
 
 `startup-document.mjs` supplies Blue for application startup and File → New. Camera, Scene and Layer 1 each contain one constant key at frame 1, held through frame 10. Blue is an ordinary 2D stick figure with ten named joints, a filled circular head, symmetric limbs and slightly bent elbows/knees. Four independent two-bone hand/foot IK controllers start enabled and unpinned, without stretching. `scripts/build-startup-blue.mjs` builds the native lines/circle and configures IK through the editor, generating a synchronous data factory; every new document owns independent editable data without rig setup at startup. STYK/STKZ retain the editable IK controls; Pivot STK/PIV retain ordinary 2D artwork and baked poses, without IK controllers. The Bubble helper and `demo.mjs` remain separate legacy tutorial/test fixtures.

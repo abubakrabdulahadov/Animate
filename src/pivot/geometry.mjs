@@ -866,7 +866,7 @@ export function* buildGeometrySteps(report, frame, incremental = null) {
       const frames = new Array(segments.length);
       for (const i of meshPlan.bones) frames[i] = renders[i]?.spatialFrame;
       spatialMesh = yield* evaluateSpatialMeshSteps(meshPlan, frames, {root, scale, figureAngle: animationRotation(fig, obj),
-        mirror: Boolean(obj.image_text_flags), camera, joints, colorOf: (c,index) => objectColor(meshPaletteColor(fig,obj,index)??c, obj), slot}, previous?.spatialMesh);
+        mirror: Boolean(obj.image_text_flags), camera, joints, lighting:obj._stykSpatial?.light, colorOf: (c,index) => objectColor(meshPaletteColor(fig,obj,index)??c, obj), slot}, previous?.spatialMesh);
       const levels = [];
       for (const p of polys) if (!p.culled) levels.push(p.z);
       // Zero-width lines paint nothing and must not split the depth-tested faces.

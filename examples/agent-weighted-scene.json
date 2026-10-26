@@ -1,0 +1,23 @@
+{
+  "version":1,
+  "name":"A careful delivery",
+  "commands":[
+    {"op":"project","width":960,"height":540,"fps":24},
+    {"op":"call","method":"addSpatialScene","args":[{
+      "position":{"x":480,"y":285},
+      "actors":[{"name":"Aziz","position":[-120,0,0],"palette":{"shirt":"#508c8a"}}],
+      "boxes":[
+        {"name":"Floor","position":[0,131,0],"size":[1100,20,1000],"color":[151,160,147]},
+        {"name":"Crate","size":[60,50,35],"color":[171,117,69],"heldBy":{"actor":0,"hand":"both"},"weight":0.9}
+      ],
+      "lighting":{"direction":[-0.7,-1,0.4],"ambient":0.52,"intensity":0.72,"color":[255,239,215],"shadows":true}
+    }]},
+    {"op":"call","method":"applySpatialSceneMotion","args":[{
+      "duration":72,"actors":[{"action":"carry","distance":120,"view":{"yaw":1.5707963267948966}}],
+      "camera":{"position":[230,-130,660],"target":[0,-5,0]}
+    }]},
+    {"op":"call","method":"applySpatialSceneMotion","args":[{"start":72,"duration":72,"actors":[{"action":"putDown"}]}]},
+    {"op":"call","method":"applySpatialSceneMotion","args":[{"start":144,"duration":72,"actors":[{"action":"walk","distance":-100}]}]}
+  ],
+  "output":"agent-weighted-scene.styk"
+}

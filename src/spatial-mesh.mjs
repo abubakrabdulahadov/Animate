@@ -1,3 +1,4 @@
+import {litColor,spatialLight} from './spatial-light.mjs';
 import {messageError} from './localized-error.mjs';
 /** Figure-level indexed skinned meshes. Vertices, triangles and colours are
  * immutable definition data bound to the figure's own spatial bones. They never
@@ -10,7 +11,7 @@ import {spatialBone,spatialViewInterpolation} from './rig-spatial.mjs';
 
 const EPS=1e-9,NEAR=.05;
 export const MESH_LIMITS=Object.freeze({vertices:200000,triangles:400000,colors:1024,groups:1024});
-const KEYS=new Set(['positions','bones','weights','indices','colors','materials','basis','z','views','viewVertices','viewPoints','groups']);
+const KEYS=new Set(['positions','bones','weights','indices','colors','materials','basis','z','views','viewVertices','viewPoints','groups','unlit']);
 export const spatialMeshOf=figure=>figure?._styk?.spatialMesh;
 
 export function validateSpatialMesh(figure){
@@ -50,6 +51,7 @@ export function validateSpatialMesh(figure){
   if(!Array.isArray(materials)||materials.length!==triangles||materials.some(i=>!Number.isInteger(i)||i<0||i>=colors.length))fail("errors.spatialMesh.each3dMeshTriangleNeedsAColour", {});
   if(!Array.isArray(basis)||basis.length!==3||basis.some(id=>!Number.isInteger(id)||(id!==0&&!ids.has(id)))||basis[1]===0||basis[2]===0||basis[1]===basis[2])
     fail("errors.spatialMesh.a3dMeshNeedsItsOriginXAnd", {});
+  if(m.unlit!==undefined&&(!Array.isArray(m.unlit)||m.unlit.length>m.colors.length||new Set(m.unlit).size!==m.unlit.length||m.unlit.some(n=>!Number.isInteger(n)||n<0||n>=m.colors.length)))throw new Error('Unlit materials must name distinct existing palette indices.');
   if(m.z!==undefined&&(typeof m.z!=='number'||!Number.isFinite(m.z)||Math.abs(m.z)>1e6))fail("errors.spatialMesh.failure3dMeshDepthOrderMustBeFinite", {});
   if(m.views!==undefined||m.viewVertices!==undefined||m.viewPoints!==undefined){
     const {views,viewVertices,viewPoints}=m;
@@ -180,19 +182,21 @@ const sameKey=(a,b)=>{if(!a||a.length!==b.length)return false;for(let i=0;i<a.le
  * unchanged pose returns its predecessor's arrays; nothing else is retained. */
 export function* evaluateSpatialMeshSteps(plan,frames,context,previous){
   const {root,scale,figureAngle,mirror,camera,joints,colorOf,slot}=context;
+  const lighting=context.lighting?spatialLight(context.lighting):null;
   const o=joints.get(plan.basis[0]),bx=joints.get(plan.basis[1]),by=joints.get(plan.basis[2]),B=plan.bones.length;
-  const key=new Float64Array(B*FRAME_VALUES+18),F=new Float64Array(B*STRIDE),W=plan.views?new Float64Array(B*6):null;
+  const key=new Float64Array(B*FRAME_VALUES+18+(lighting?8:0)),F=new Float64Array(B*STRIDE),W=plan.views?new Float64Array(B*6):null;
   for(let i=0;i<B;i++){
     const f=frames[plan.bones[i]];if(!f)throw messageError(new Error(''), "errors.spatialMesh.a3dMeshBoneWasNotEvaluated", {});
     frameValues(f,key,i*FRAME_VALUES);boneValues(f,F,i*STRIDE);
     if(W){const view=spatialViewInterpolation(f),interval=plan.views===8?view.eight:view.four;W.set([interval.index,interval.next,interval.blend,view.cos,view.sin,view.strength],i*6);}
   }
-  const g=B*FRAME_VALUES;
+  const g=key.length-18;if(lighting)key.set([...lighting.direction,lighting.ambient,lighting.intensity,...lighting.color],B*FRAME_VALUES);
   key[g]=root.x;key[g+1]=root.y;key[g+2]=scale;key[g+3]=figureAngle;key[g+4]=mirror?1:0;
   key[g+5]=camera?camera.k:NaN;key[g+6]=camera?camera.root.x:NaN;key[g+7]=camera?camera.root.y:NaN;key[g+8]=camera?camera.scale:NaN;
   for(const [j,p] of [o,bx,by].entries()){key[g+9+j*2]=p?p.x:NaN;key[g+10+j*2]=p?p.y:NaN;}
   key[g+15]=o?1:0;key[g+16]=bx?1:0;key[g+17]=by?1:0;
-  const colors=plan.palette.map(colorOf);
+  const baseColors=plan.palette.map(colorOf),unlit=new Set(plan.mesh?.unlit??[]);
+  const colors=lighting?baseColors.flatMap((rgb,i)=>Array.from({length:16},(_,level)=>unlit.has(i)?rgb:litColor(rgb,lighting,level/15))):baseColors;
   if(previous?.plan===plan&&sameKey(previous.key,key)){
     const same=previous.colors.length===colors.length&&colors.every((c,i)=>c[0]===previous.colors[i][0]&&c[1]===previous.colors[i][1]&&c[2]===previous.colors[i][2]);
     return same?previous:{...previous,colors};
@@ -200,7 +204,7 @@ export function* evaluateSpatialMeshSteps(plan,frames,context,previous){
   const n=plan.vertices,cs=Math.cos(figureAngle),sn=Math.sin(figureAngle),sign=mirror?-1:1,base=plan.base;
   const nearZ=camera?(1-NEAR)/camera.k:Infinity,P=plan.positions,counts=plan.counts,slots=plan.slots,viewSlot=plan.viewSlot,views=plan.viewPoints,stride=plan.views*3;
   let positions=new Float32Array(n*2),depth=new Float32Array(n),extra=0;
-  const raw=camera?new Float64Array(n*3):null,point=new Float64Array(3);
+  const raw=camera||lighting?new Float64Array(n*3):null,point=new Float64Array(3);
   const dx=bx&&o?bx.x-o.x:0,dy=bx&&o?bx.y-o.y:0,den=dx*dx+dy*dy,flat=o&&den>=1e-16;
   // Bounds and the depth range cover the vertices of visible faces only, as
   // native surfaces do; the range sets depth-buffer quantization.
@@ -224,19 +228,28 @@ export function* evaluateSpatialMeshSteps(plan,frames,context,previous){
       sx=camera.root.x+(X-camera.root.x)/q;sy=camera.root.y+(Y-camera.root.y)/q;d=base+rz/q/camera.scale;
       raw[v*3]=X;raw[v*3+1]=Y;raw[v*3+2]=rz;
     }else{sx=X;sy=Y;d=flat?base+((root.x+point[2]*scale*cs-o.x)*dx+(root.y+point[2]*scale*sn-o.y)*dy)/den:base;}
+    if(raw&&!camera){raw[v*3]=X;raw[v*3+1]=Y;raw[v*3+2]=point[2]*scale;}
     positions[v*2]=sx;positions[v*2+1]=sy;depth[v]=d;
     if((v&8191)===8191)yield {phase:'geometry',stage:'mesh vertices',slot,completed:v+1,total:n};
   }
   const parity=o&&bx&&by?Math.sign(dx*(by.y-o.y)-dy*(by.x-o.x)):0,I=plan.indices,M=plan.materials;
   let triangles=new Uint32Array(plan.triangles*3),materials=new Uint16Array(plan.triangles),z=new Float32Array(plan.triangles),count=0;
   const grow=()=>{const size=Math.max(16,count*2);let t=new Uint32Array(size*3);t.set(triangles);triangles=t;t=new Uint16Array(size);t.set(materials);materials=t;t=new Float32Array(size);t.set(z);z=t;};
+  const material=(t,a,b,c)=>{
+    if(!lighting)return M[t];
+    if(unlit.has(M[t]))return M[t]*16+15;
+    const ax=raw[b*3]-raw[a*3],ay=raw[b*3+1]-raw[a*3+1],az=raw[b*3+2]-raw[a*3+2],bx=raw[c*3]-raw[a*3],by=raw[c*3+1]-raw[a*3+1],bz=raw[c*3+2]-raw[a*3+2];
+    const x=ay*bz-az*by,y=az*bx-ax*bz,z=ax*by-ay*bx,n=Math.hypot(x,y,z),l=lighting.direction;
+    const diffuse=n>1e-12?Math.max(0,(x*l[0]+y*l[1]+z*l[2])*(mirror?-1:1)/n):0;
+    return M[t]*16+Math.round(diffuse*15);
+  };
   for(let t=0;parity&&t<plan.triangles;t++){
     const a=I[t*3],b=I[t*3+1],c=I[t*3+2];
     if(!camera||(raw[a*3+2]<=nearZ&&raw[b*3+2]<=nearZ&&raw[c*3+2]<=nearZ)){
       const ax=positions[a*2],ay=positions[a*2+1],ux=positions[b*2]-ax,uy=positions[b*2+1]-ay,vx=positions[c*2]-ax,vy=positions[c*2+1]-ay;
       if((ux*vy-uy*vx)*parity<=Math.max(ux*ux+uy*uy,vx*vx+vy*vy)*2e-7)continue;
       if(count===materials.length)grow();
-      triangles[count*3]=a;triangles[count*3+1]=b;triangles[count*3+2]=c;materials[count]=M[t];z[count]=(depth[a]+depth[b]+depth[c])/3;count++;
+      triangles[count*3]=a;triangles[count*3+1]=b;triangles[count*3+2]=c;materials[count]=material(t,a,b,c);z[count]=(depth[a]+depth[b]+depth[c])/3;count++;
       used[a]=1;used[b]=1;used[c]=1;
     }else{
       // Clip against the near plane before projection, as native surfaces do.
@@ -259,7 +272,7 @@ export function* evaluateSpatialMeshSteps(plan,frames,context,previous){
         if(fx<x0)x0=fx;if(fx>x1)x1=fx;if(fy<y0)y0=fy;if(fy>y1)y1=fy;if(fd<zMin)zMin=fd;if(fd>zMax)zMax=fd;
         return at;
       }),value=projected.reduce((s,p)=>s+p[2],0)/projected.length;
-      for(let i=1;i+1<ids.length;i++){if(count===materials.length)grow();triangles[count*3]=ids[0];triangles[count*3+1]=ids[i];triangles[count*3+2]=ids[i+1];materials[count]=M[t];z[count]=value;count++;}
+      for(let i=1;i+1<ids.length;i++){if(count===materials.length)grow();triangles[count*3]=ids[0];triangles[count*3+1]=ids[i];triangles[count*3+2]=ids[i+1];materials[count]=material(t,a,b,c);z[count]=value;count++;}
     }
     if((t&16383)===16383)yield {phase:'geometry',stage:'mesh faces',slot,completed:t+1,total:plan.triangles};
   }
@@ -268,7 +281,7 @@ export function* evaluateSpatialMeshSteps(plan,frames,context,previous){
     const fx=positions[v*2],fy=positions[v*2+1],fd=depth[v];
     if(fx<x0)x0=fx;if(fx>x1)x1=fx;if(fy<y0)y0=fy;if(fy>y1)y1=fy;if(fd<zMin)zMin=fd;if(fd>zMax)zMax=fd;
   }
-  return {plan,key,vertexCount:n+extra,positions,depth,triangles,materials,z,count,colors,
+  return {plan,key,rootIndices:FIGURE_ROOT_INDICES(g),vertexCount:n+extra,positions,depth,triangles,materials,z,count,colors,
     bounds:count&&x0<=x1?{x0,y0,x1,y1}:null,zMin,zMax};
 }
 export function evaluateSpatialMesh(plan,frames,context,previous){

@@ -25,7 +25,8 @@ head faces away and orders near/far limbs; painter-order tricks or a mirrored
 face image are not used. Head turn/tilt are relative to the body. The geometry
 uses about 6,500 vertices and 10,200 triangles, but only 45 native controls, so
 mesh density does not multiply pose channel size. Palette shading is baked into
-the mesh; it is stylized shading, not a dynamic scene lighting system.
+the mesh; shared scenes can add optional directional light and ground shadows
+through [scene lighting](SPATIAL-SCENES.md).
 
 ## Pose and view controls
 
@@ -97,8 +98,10 @@ Pivot STK/PIV export has the existing indexed-mesh restrictions.
 Reflected characters, pinned spatial IK, changed bone proportions and nonzero
 planar whole-figure rotation reject generated motion; use spatial view roll for
 shot rotation. Planar cloth baking is not a 3D cloth solver and is not applied to
-this mesh. Native manual posing remains available. This preset does not add
-collision physics, joint-limit biomechanics or arbitrary imported-model retargeting.
+this mesh. Native manual posing remains available. This preset does not add rigid-body collision physics, joint-limit biomechanics
+or arbitrary imported-model retargeting. Loaded arms and optional reaching
+contacts use a conservative torso core; shared scenes also prevent blocked
+travel through their supported scenery.
 
 ## Verification
 

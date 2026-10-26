@@ -50,7 +50,7 @@ The implementation uses StykAnimate's existing solver and native pose semantics.
 
 | Field | Meaning |
 | --- | --- |
-| `action` | `walk` (default), `idle`, `wave`, `reach`, `carry`; spatial cartoon characters also accept `turn`. |
+| `action` | `walk` (default), `idle`, `wave`, `reach`, `carry`, `putDown`; spatial cartoon characters also accept `turn`. |
 | `start` | Zero-based tick; defaults to the playhead. A start beyond the tail uses the last visible pose. |
 | `duration` | Number of output ticks, 2–2400; default is approximately two seconds at the document FPS. |
 | `distance` | Signed scene-pixel travel for `walk`; default is twice the shorter leg's reach. Other actions use zero. |
@@ -62,7 +62,7 @@ The implementation uses StykAnimate's existing solver and native pose semantics.
 | `target` | Required world-space `{x,y}` for reach. Targets outside arm reach stop at the limb's reach without stretching. |
 | `after` | `hold` (default) keeps the generated final pose until a later existing key. `restore` adds the original pose at the exclusive end when the original animation continues. |
 | `rig` | Optional explicit native handle mapping below. |
-| `carry` | `{hand:'left'\|'right'\|'both', forward?, height?}` keeps a carrying grip during walk/idle; fractions default to .45/.32 of arm reach. |
+| `carry` | `{hand:'left'\|'right'\|'both', forward?, height?, weight?, loadHeight?}` keeps a carrying grip during walk/idle; fractions default to .45/.32 of arm reach. |
 | `cloth` | Cloth motion settings, or `false` to keep attached cloth rigid; see [Cloth motion](CLOTH-MOTION.md). |
 | `view`, `viewTo` | Spatial cartoon character body/head and orbital view endpoints; see [Spatial characters](SPATIAL-CHARACTERS.md). |
 | `armBend` | Empty-arm elbow flex in radians, 0–0.35; defaults to 0.1 (about 6°). Zero keeps the arm straight. Applies to walk/carry free arms in 2D and spatial characters. |
@@ -76,6 +76,20 @@ The sampler/preview returns world-space `grips.left`/`grips.right` coordinates f
 held artwork. Generate the character poses before attaching props to their hand
 handles; joined groups must be detached before motion generation. Walking can
 use `carry:{hand:'left'}` while the other arm swings freely.
+
+`carry.weight` is a normalized load, 0–1 (default zero), rather than kilograms.
+Heavier loads add forward torso lean, pelvic counterbalance, knee flexion,
+shorter steps and less secondary sway. Distance and duration remain explicit;
+raise duration when a slower walk is wanted. Zero retains the unweighted grip.
+
+`action:'putDown'` lowers the pelvis, bends the knees forward and follows the
+load down with the arms. `carry.loadHeight` is the load's height in scene units
+(default 40% of leg reach); the final grip aims at `groundY-loadHeight`.
+`load` reports weight, lowering and release state. The character releases the load near the lowest pose, then stands and relaxes
+its arms during the remaining range. Shared 3D scenes attach box
+loads to these grips and preserve the released box as native pose state.
+Targets outside physical reach retain a residual; a scene refuses to release a
+box if its hands cannot bring the base to the floor without stretching.
 
 Motion is sampled once per output tick. Walking requires at least twelve samples
 per complete stride; increase duration for a longer distance. Preview returns the

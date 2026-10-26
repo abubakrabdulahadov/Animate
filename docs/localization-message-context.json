@@ -21370,187 +21370,187 @@
   },
   "errors.spatialMesh.a3dMeshBoneWasNotEvaluated": {
     "locations": [
-      "src/spatial-mesh.mjs:186"
+      "src/spatial-mesh.mjs:189"
     ],
     "context": "const f=frames[plan.bones[i]];if(!f)throw messageError(new Error(''), \"errors.spatialMesh.a3dMeshBoneWasNotEvaluated\", {});"
   },
   "errors.spatialMesh.a3dMeshCanHaveUpToTriangles": {
     "locations": [
-      "src/spatial-mesh.mjs:42"
+      "src/spatial-mesh.mjs:43"
     ],
     "context": "if(triangles>MESH_LIMITS.triangles)fail(\"errors.spatialMesh.a3dMeshCanHaveUpToTriangles\", {triangles: MESH_LIMITS.triangles});"
   },
   "errors.spatialMesh.a3dMeshCanHaveUpToVertices": {
     "locations": [
-      "src/spatial-mesh.mjs:23"
+      "src/spatial-mesh.mjs:24"
     ],
     "context": "if(count>MESH_LIMITS.vertices)fail(\"errors.spatialMesh.a3dMeshCanHaveUpToVertices\", {vertices: MESH_LIMITS.vertices});"
   },
   "errors.spatialMesh.a3dMeshNeeds1RgbColours": {
     "locations": [
-      "src/spatial-mesh.mjs:49"
+      "src/spatial-mesh.mjs:50"
     ],
     "context": "fail(\"errors.spatialMesh.a3dMeshNeeds1RgbColours\", {colors: MESH_LIMITS.colors});"
   },
   "errors.spatialMesh.a3dMeshNeedsItsOriginXAnd": {
     "locations": [
-      "src/spatial-mesh.mjs:52"
+      "src/spatial-mesh.mjs:53"
     ],
     "context": "fail(\"errors.spatialMesh.a3dMeshNeedsItsOriginXAnd\", {});"
   },
   "errors.spatialMesh.a3dMeshNeedsTriangleIndices": {
     "locations": [
-      "src/spatial-mesh.mjs:40"
+      "src/spatial-mesh.mjs:41"
     ],
     "context": "if(!Array.isArray(indices)||!indices.length||indices.length%3)fail(\"errors.spatialMesh.a3dMeshNeedsTriangleIndices\", {});"
   },
   "errors.spatialMesh.a3dMeshNeedsXyzPositionsForAt": {
     "locations": [
-      "src/spatial-mesh.mjs:21"
+      "src/spatial-mesh.mjs:22"
     ],
     "context": "if(!Array.isArray(positions)||positions.length<9||positions.length%3)fail(\"errors.spatialMesh.a3dMeshNeedsXyzPositionsForAt\", {});"
   },
   "errors.spatialMesh.a3dMeshReferencesAMissingBone": {
     "locations": [
-      "src/spatial-mesh.mjs:97"
+      "src/spatial-mesh.mjs:99"
     ],
     "context": "const index=ids.get(bone);if(index===undefined)throw messageError(new Error(''), \"errors.spatialMesh.a3dMeshReferencesAMissingBone\", {});"
   },
   "errors.spatialMesh.a3dMeshVertexCannotBindOneBone": {
     "locations": [
-      "src/spatial-mesh.mjs:34"
+      "src/spatial-mesh.mjs:35"
     ],
     "context": "for(let j=0;j<k;j++)if(bones[v*4+j]===bone)fail(\"errors.spatialMesh.a3dMeshVertexCannotBindOneBone\", {});"
   },
   "errors.spatialMesh.bindEvery3dMeshVertexToAtLeast": {
     "locations": [
-      "src/spatial-mesh.mjs:32"
+      "src/spatial-mesh.mjs:33"
     ],
     "context": "if((bone===0)!==(weight===0)||(k===0&&bone===0))fail(\"errors.spatialMesh.bindEvery3dMeshVertexToAtLeast\", {});"
   },
   "errors.spatialMesh.each3dMeshTriangleNeedsAColour": {
     "locations": [
-      "src/spatial-mesh.mjs:50"
+      "src/spatial-mesh.mjs:51"
     ],
     "context": "if(!Array.isArray(materials)||materials.length!==triangles||materials.some(i=>!Number.isInteger(i)||i<0||i>=colors.length))fail(\"errors.spatialMesh.each3dMeshTr"
   },
   "errors.spatialMesh.each3dMeshVertexNeedsFourBoneAnd": {
     "locations": [
-      "src/spatial-mesh.mjs:25"
+      "src/spatial-mesh.mjs:26"
     ],
     "context": "if(!Array.isArray(bones)||bones.length!==count*4||!Array.isArray(weights)||weights.length!==count*4)fail(\"errors.spatialMesh.each3dMeshVertexNeedsFourBoneAnd\", "
   },
   "errors.spatialMesh.failure3dMeshBindingsNeedBoneIdsAndWeights": {
     "locations": [
-      "src/spatial-mesh.mjs:31"
+      "src/spatial-mesh.mjs:32"
     ],
     "context": "if(!Number.isInteger(bone)||bone<0||bone>65535||typeof weight!=='number'||!Number.isFinite(weight)||weight<0||weight>1)fail(\"errors.spatialMesh.failure3dMeshBin"
   },
   "errors.spatialMesh.failure3dMeshDepthOrderMustBeFinite": {
     "locations": [
-      "src/spatial-mesh.mjs:53"
+      "src/spatial-mesh.mjs:55"
     ],
     "context": "if(m.z!==undefined&&(typeof m.z!=='number'||!Number.isFinite(m.z)||Math.abs(m.z)>1e6))fail(\"errors.spatialMesh.failure3dMeshDepthOrderMustBeFinite\", {});"
   },
   "errors.spatialMesh.failure3dMeshPartsNeedNamesAndOrderedTriangle": {
     "locations": [
-      "src/spatial-mesh.mjs:71"
+      "src/spatial-mesh.mjs:73"
     ],
     "context": "!Number.isInteger(g.start)||!Number.isInteger(g.count)||g.count<1||g.start<end||g.start+g.count>triangles)fail(\"errors.spatialMesh.failure3dMeshPartsNeedNamesAn"
   },
   "errors.spatialMesh.failure3dMeshPositionsMustBeFinite": {
     "locations": [
-      "src/spatial-mesh.mjs:24"
+      "src/spatial-mesh.mjs:25"
     ],
     "context": "for(const v of positions)if(typeof v!=='number'||!Number.isFinite(v)||Math.abs(v)>1e6)fail(\"errors.spatialMesh.failure3dMeshPositionsMustBeFinite\", {});"
   },
   "errors.spatialMesh.failure3dMeshTrianglesMustReferenceExistingVertices": {
     "locations": [
-      "src/spatial-mesh.mjs:45"
+      "src/spatial-mesh.mjs:46"
     ],
     "context": "for(const n of [a,b,c])if(!Number.isInteger(n)||n<0||n>=count)fail(\"errors.spatialMesh.failure3dMeshTrianglesMustReferenceExistingVertices\", {});"
   },
   "errors.spatialMesh.failure3dMeshTrianglesNeedThreeDifferentVertices": {
     "locations": [
-      "src/spatial-mesh.mjs:46"
+      "src/spatial-mesh.mjs:47"
     ],
     "context": "if(a===b||b===c||a===c)fail(\"errors.spatialMesh.failure3dMeshTrianglesNeedThreeDifferentVertices\", {});"
   },
   "errors.spatialMesh.failure3dMeshVertexWeightsMustAddUpTo": {
     "locations": [
-      "src/spatial-mesh.mjs:38"
+      "src/spatial-mesh.mjs:39"
     ],
     "context": "if(Math.abs(sum-1)>1e-6)fail(\"errors.spatialMesh.failure3dMeshVertexWeightsMustAddUpTo\", {});"
   },
   "errors.spatialMesh.failure3dMeshVerticesMustBindArticulatedSpatialJoints": {
     "locations": [
-      "src/spatial-mesh.mjs:35"
+      "src/spatial-mesh.mjs:36"
     ],
     "context": "if(!checked.has(bone)){if(!spatialBone(figure.segments[ids.get(bone)]))fail(\"errors.spatialMesh.failure3dMeshVerticesMustBindArticulatedSpatialJoints\", {});chec"
   },
   "errors.spatialMesh.failure3dMeshViewPositionsMustBeFinite": {
     "locations": [
-      "src/spatial-mesh.mjs:64"
+      "src/spatial-mesh.mjs:66"
     ],
     "context": "for(const n of viewPoints)if(typeof n!=='number'||!Number.isFinite(n)||Math.abs(n)>1e6)fail(\"errors.spatialMesh.failure3dMeshViewPositionsMustBeFinite\", {});"
   },
   "errors.spatialMesh.invalid3dMesh": {
     "locations": [
-      "src/spatial-mesh.mjs:19"
+      "src/spatial-mesh.mjs:20"
     ],
     "context": "if(!m||typeof m!=='object'||Array.isArray(m)||Object.keys(m).some(k=>!KEYS.has(k)))fail(\"errors.spatialMesh.invalid3dMesh\", {});"
   },
   "errors.spatialMesh.invalid3dMeshParts": {
     "locations": [
-      "src/spatial-mesh.mjs:67"
+      "src/spatial-mesh.mjs:69"
     ],
     "context": "if(!Array.isArray(m.groups)||m.groups.length>MESH_LIMITS.groups)fail(\"errors.spatialMesh.invalid3dMeshParts\", {});"
   },
   "errors.spatialMesh.viewCorrectedMeshVerticesMustFollowOneBone": {
     "locations": [
-      "src/spatial-mesh.mjs:61"
+      "src/spatial-mesh.mjs:63"
     ],
     "context": "if(weights[v*4]!==1)fail(\"errors.spatialMesh.viewCorrectedMeshVerticesMustFollowOneBone\", {});"
   },
   "errors.spatialMesh.viewCorrectedMeshVerticesNeedFourOrEight": {
     "locations": [
-      "src/spatial-mesh.mjs:57"
+      "src/spatial-mesh.mjs:59"
     ],
     "context": "fail(\"errors.spatialMesh.viewCorrectedMeshVerticesNeedFourOrEight\", {});"
   },
   "errors.spatialMesh.viewCorrectedVerticesMustBeListedOnceIn": {
     "locations": [
-      "src/spatial-mesh.mjs:60"
+      "src/spatial-mesh.mjs:62"
     ],
     "context": "if(!Number.isInteger(v)||v<=previous||v>=count)fail(\"errors.spatialMesh.viewCorrectedVerticesMustBeListedOnceIn\", {});"
   },
   "errors.spatialProjection.invalidSpatialPoseSettings": {
     "locations": [
-      "src/spatial-projection.mjs:56"
+      "src/spatial-projection.mjs:57"
     ],
-    "context": "if(!record(state)||Object.keys(state).some(k=>!['camera','shape'].includes(k)))throw messageError(new Error(''), \"errors.spatialProjection.invalidSpatialPoseSet"
+    "context": "if(!record(state)||Object.keys(state).some(k=>!['camera','shape','light'].includes(k)))throw messageError(new Error(''), \"errors.spatialProjection.invalidSpatia"
   },
   "errors.spatialProjection.invalidSpatialProportions": {
     "locations": [
-      "src/spatial-projection.mjs:59"
+      "src/spatial-projection.mjs:61"
     ],
     "context": "if(!record(state.shape)||Object.keys(state.shape).length>figure.segments.length)throw messageError(new Error(''), \"errors.spatialProjection.invalidSpatialPropor"
   },
   "errors.spatialProjection.perspectiveNeedsStrength01AndDistance10": {
     "locations": [
-      "src/spatial-projection.mjs:57"
+      "src/spatial-projection.mjs:58"
     ],
     "context": "if(state.camera!==undefined){const c=state.camera;if(!record(c)||Object.keys(c).some(k=>!['strength','distance','centerX','centerY'].includes(k))||!number(c.str"
   },
   "errors.spatialProjection.perspectiveRequiresASingleSpatialFigureOrA": {
     "locations": [
-      "src/spatial-projection.mjs:15"
+      "src/spatial-projection.mjs:16"
     ],
     "context": "for(const o of frame.objects)if(o.join&&(o._stykSpatial?.camera?.strength||frame.objects[o.join.target_object_slot]?._stykSpatial?.camera?.strength&&!projectedD"
   },
   "errors.spatialProjection.spatialProportionsNeedAnExistingBoneWidth0": {
     "locations": [
-      "src/spatial-projection.mjs:61"
+      "src/spatial-projection.mjs:63"
     ],
     "context": "for(const[id,s]of Object.entries(state.shape))if(String(Number(id))!==id||!bones.has(Number(id))||!record(s)||Object.keys(s).some(k=>!['width','taper'].includes"
   },

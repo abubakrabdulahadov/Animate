@@ -17,6 +17,7 @@ whatever the density of its surface.
 | `basis` | Origin, X and Y reference joints, as for one-sided native fills. |
 | `z` | Optional depth-order offset of every face. |
 | `views`, `viewVertices`, `viewPoints` | Optional four- or eight-view targets for single-bone vertices, with the semantics of view-corrected skin. |
+| `unlit` | Optional palette indices exempt from directional pose lighting, such as baked ground-shadow colors. |
 | `groups` | Optional named, ordered triangle ranges, such as "Mask" or "Left boot". |
 
 Validation bounds vertices (200,000), triangles (400,000), palette size and
@@ -131,3 +132,16 @@ history sharing, and materialization. It compares incremental poses with fresh
 evaluation throughout full turns and vertical tilts, and checks that view-corrected
 meshes reproduce every authored heading, blend between them, fade near vertical
 views and interpolate per-view turns as rotations.
+
+## Optional pose lighting
+
+A spatial pose may include `_stykSpatial.light` with a nonzero XYZ `direction`,
+`ambient`, `intensity`, and RGB `color`. Validation bounds these values and native
+pose interpolation preserves them. Mesh evaluation transforms face normals before
+projection and chooses among 16 diffuse levels per source palette entry. The
+source palette still has at most 1,024 entries; the derived palette has at most
+16,384, within the existing material index representation. Unlit entries retain
+their original colors at every level. Lighting participates in artwork identity,
+including worker-prepared playback, software painting, accelerated mesh draws
+and export. Figures without lighting retain their original palette and caching
+behavior. See [shared scene lighting](SPATIAL-SCENES.md).
