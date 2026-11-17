@@ -263,7 +263,7 @@ export function createHumanMotion(figure,object,options={},fps=24) {
     const draped=cloth?.meshes.length?cloth.apply(pose,seconds,{joints:baked,velocity:{x:velocity,y:0}}):pose;
     synchronizeAnimationOrigin(figure,draped);
     const support=walking?Math.cos(phase)*(front==='left'?1:-1)*body:0;
-    return {pose:draped,contacts,targets,grips,phase:act?u:cycle,weight,entry,support,airborne:act?act.airborne:running&&feet.left.y<ground-legLength*.0001&&feet.right.y<ground-legLength*.0001&&Object.values(contacts).every(c=>!c.planted)&&entry>=.999999,load:{weight:load,lowering,released:release>=.999999}};
+    return {pose:draped,contacts,targets,grips,phase:act?u:cycle,weight,entry,support,twist:act?.twist??0,airborne:act?act.airborne:running&&feet.left.y<ground-legLength*.0001&&feet.right.y<ground-legLength*.0001&&Object.values(contacts).every(c=>!c.planted)&&entry>=.999999,load:{weight:load,lowering,released:release>=.999999}};
   };
   return {rig,settings,legLength,root,ground:ground+sole,events:actionEvents(settings.action,settings.duration),sample};
 }

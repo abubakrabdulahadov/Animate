@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "name": "3D fight under a moving camera",
+  "commands": [
+    {"op": "project", "width": 960, "height": 540, "fps": 24},
+    {"op": "call", "method": "addSpatialScene", "args": [{
+      "position": {"x": 480, "y": 290},
+      "actors": [
+        {"name": "Aziz", "position": [-60, 0, 0], "palette": {"shirt": "#4f9590"}},
+        {"name": "Nila", "position": [62, 0, 0], "palette": {"shirt": "#c1846b"}}
+      ],
+      "boxes": [{"name": "Floor", "position": [0, 131, 0], "size": [900, 20, 600], "color": [116, 143, 144]}],
+      "lighting": {"shadows": true}
+    }]},
+    {"op": "call", "method": "applySpatialSceneMotion", "args": [{
+      "duration": 30,
+      "actors": [{"action": "punch", "facing": 1}, {"action": "hit", "facing": -1, "delay": 13}],
+      "camera": {"position": [120, -90, 620], "target": [0, -30, 0], "focalLength": 700}
+    }]},
+    {"op": "call", "method": "addCameraMotion", "args": ["impact", {"start": 13, "duration": 8}]},
+    {"op": "call", "method": "applySpatialSceneMotion", "args": [{
+      "start": 30, "duration": 34,
+      "actors": [{"action": "kick", "facing": 1}, {"action": "hit", "facing": -1, "delay": 16, "distance": -50, "intensity": 1.3}],
+      "cameraTo": {"position": [-260, -120, 560], "target": [20, -30, 0]}
+    }]},
+    {"op": "call", "method": "addCameraMotion", "args": ["impact", {"start": 46, "duration": 10}]},
+    {"op": "call", "method": "applySpatialSceneMotion", "args": [{
+      "start": 64, "duration": 36,
+      "actors": [{"action": "jump", "facing": 1, "height": 90}, {"action": "idle"}]
+    }]}
+  ],
+  "output": "agent-spatial-fight.mp4"
+}

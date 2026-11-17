@@ -131,7 +131,9 @@ export function createSpatialSceneMotion(figure,object,options={},fps=24){
  const base=cameraSettings(options.camera??{},sourceCamera),end=cameraSettings(options.cameraTo??{},base);
  const adjusted=actorOptions.map(o=>({...o})),blocked=[];
  const makeMotion=(a,i,factor=1)=>{
-  const original=adjusted[i]??{action:'idle'},opt={...original};
+  const original=adjusted[i]??{action:'idle'},{delay=0,...opt}=original;
+  // An actor may hold its pose before acting, so a hit can start on another actor's impact.
+  if(!Number.isInteger(delay)||delay<0||delay>duration-2)throw new RangeError(`Actor delay must be a whole tick from 0 to ${duration-2}.`);
   const props=activeProps.filter(p=>p.heldBy.actor===i);
   if(props.length){const hand=props.length>1?'both':props[0].heldBy.hand,forward=Math.max(.45,...props.map(p=>(p.size[2]/2+25)/73));if(forward>.7)throw new Error('The carried box is too deep for this character’s reach.');
    opt.carry={hand,forward,weight:Math.min(1,props.reduce((n,p)=>n+p.weight,0)),loadHeight:props[0].size[1],...original.carry};
@@ -141,7 +143,10 @@ export function createSpatialSceneMotion(figure,object,options={},fps=24){
   if(opt.view?.orbitYaw||opt.view?.orbitPitch||opt.viewTo?.orbitYaw||opt.viewTo?.orbitPitch||opt.view?.perspective||opt.viewTo?.perspective)throw new Error('Use the shared scene camera instead of per-actor orbit or perspective.');
   const source=createObject(a.figure,i+1,0,0);
   for(const [sourceId,targetId]of a.ids){const si=a.figure.segments.findIndex(s=>s.segment_id===sourceId),ti=index.get(targetId);source.angles[si]=object.angles[ti]-(a.figure.segments[si]._stykRig?.spatial?.origin?cameraBend:0);}
-  return createHumanMotion(a.figure,source,{...opt,duration,groundY:opt.groundY??121,view:{headPitch:0,...opt.view,perspective:0},viewTo:{...opt.viewTo,perspective:0}},fps);
+  const m=createHumanMotion(a.figure,source,{...opt,duration:duration-delay,groundY:opt.groundY??121,view:{headPitch:0,...opt.view,perspective:0},viewTo:{...opt.viewTo,perspective:0}},fps);
+  if(!delay)return m;
+  const local=tick=>Math.max(0,tick-delay);
+  return {...m,delay,events:(m.events??[]).map(e=>({...e,tick:e.tick+delay})),pathAt:tick=>m.pathAt(local(tick)),sample:tick=>m.sample(local(tick))};
  };
  const motions=scene.actors.map((a,i)=>makeMotion(a,i));
  const obstacles=[...(scene.boxes??[]).filter(b=>b.collider),...(scene.props??[]).filter(p=>!activeProps.includes(p)).map(p=>({name:p.name,position:p.translation.map(currentTravel),size:p.size,releasedBy:p.heldBy.actor}))];
@@ -166,8 +171,8 @@ export function createSpatialSceneMotion(figure,object,options={},fps=24){
   }
  }
  if(collisionMode!=='off'){for(let i=0;i<motions.length;i++)if(collision(motions[i],i))throw new Error('The shortened path still intersects an obstacle; adjust the path.');if(pairCollision(motions))throw new Error('The shortened actor paths still intersect; adjust their headings.');}
- const releases=motions.map(m=>m.settings.action==='putDown'?m.sample((duration-1)*.65):null);
- return {settings:{duration},rig:null,sample(tick){
+ const releases=motions.map(m=>m.settings.action==='putDown'?m.sample((m.delay??0)+(m.settings.duration-1)*.65):null);
+ return {settings:{duration},rig:null,events:motions.flatMap((m,actor)=>(m.events??[]).map(e=>({...e,actor}))),sample(tick){
   finite(tick,'sample tick',0,duration-1);const t=ease(tick/(duration-1)),c={position:base.position.map((v,i)=>mix(v,end.position[i],t)),target:base.target.map((v,i)=>mix(v,end.target[i],t)),focalLength:mix(base.focalLength,end.focalLength,t),roll:mix(base.roll,end.roll,t)};
   if(options.cameraPath!=='linear'){
    const a=base.position.map((v,i)=>v-base.target[i]),b=end.position.map((v,i)=>v-end.target[i]),ra=Math.hypot(...a),rb=Math.hypot(...b),x=a.map(v=>v/ra),y=b.map(v=>v/rb),dot=Math.max(-1,Math.min(1,x.reduce((v,n,i)=>v+n*y[i],0)));

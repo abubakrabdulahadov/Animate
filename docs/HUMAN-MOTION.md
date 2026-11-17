@@ -54,7 +54,7 @@ The implementation uses StykAnimate's existing solver and native pose semantics.
 
 | Field | Meaning |
 | --- | --- |
-| `action` | `walk` (default), `run`, `idle`, `wave`, `reach`, `carry`, `putDown`, and for 2D figures `jump`, `punch`, `kick`, `hit`; spatial cartoon characters also accept `turn`. |
+| `action` | `walk` (default), `run`, `idle`, `wave`, `reach`, `carry`, `putDown`, `jump`, `punch`, `kick`, `hit`; spatial cartoon characters also accept `turn`. |
 | `start` | Zero-based tick; defaults to the playhead. A start beyond the tail uses the last visible pose. |
 | `duration` | Number of output ticks, 2–2400; default is approximately two seconds at the document FPS. |
 | `distance` | Signed scene-pixel travel for walk/run/carry/jump/hit; defaults to twice leg reach for walk, five times for run, zero for jump and a 0.35-leg knockback for hit. Other standing actions use zero. |
@@ -63,8 +63,8 @@ The implementation uses StykAnimate's existing solver and native pose semantics.
 | `intensity` | 0–1.5, default 1; secondary motion strength. |
 | `blend` | Seconds of soft entrance/settling, 0–2; default 0.25; unloaded idle defaults to zero for an immediately upright stance. Locomotion contacts are not marked planted during the initial pose transition. |
 | `hand` | `left` or `right` for wave/reach/punch, default `right`; refers to rig roles. |
-| `target` | Required world-space `{x,y}` for reach; optional for punch/kick. Targets outside reach stop at the limb's reach without stretching. |
-| `facing` | `1` or `-1` for jump/punch/kick/hit. Defaults to the target side, the jump travel direction, or `1`. |
+| `target` | Required world-space `{x,y}` for reach; optional for 2D punch/kick. Targets outside reach stop at the limb's reach without stretching. |
+| `facing` | `1` or `-1` for jump/punch/kick/hit. In 2D it defaults to the target side, the jump travel direction, or `1`; for 3D characters it turns the body to that profile, otherwise the source heading is kept. |
 | `height` | Jump apex rise of the pelvis in scene pixels, 10%–200% of leg length; default 55%. |
 | `foot` | `left` or `right` kicking foot, default `right`. |
 | `after` | `hold` (default) keeps the generated final pose until a later existing key. `restore` adds the original pose at the exclusive end when the original animation continues. |
@@ -187,7 +187,7 @@ Reported timings describe the named fixture and machine only.
 ## Actions
 
 `jump`, `punch`, `kick` and `hit` give agents a stylized action vocabulary for
-short fights and stunts on 2D figures. Each uses pose-to-pose keys joined by
+short fights and stunts on 2D figures and built-in 3D cartoon characters. Each uses pose-to-pose keys joined by
 cubic Hermite curves, so motion flows through anticipation, the main action and
 follow-through instead of stopping at every key; strikes use a fast ease-out.
 
@@ -218,8 +218,18 @@ editor.addCameraMotion('impact',{start:impact.tick,duration:8});
 ```
 
 See [the stick fight example](../examples/agent-stick-fight.json), which exports an
-MP4 directly. Spatial 3D characters reject these actions with an explanatory error;
-the shared 3D locomotion adapter plans grounded feet only.
+MP4 directly.
+
+3D cartoon characters plan each action in their own sagittal plane and lift it
+into native spatial rotations, like walking. Forward is the body heading: `view.yaw`
+or `facing` sets it, `distance` is signed along it (positive jumps forward; a hit's
+default knockback is backwards), and the root travels along that heading. Punches,
+kicks and hits also turn the torso so the striking shoulder or hip leads. Feet are
+the action's own plants, so planted soles stay on the floor while kicks and jumps
+leave it. 3D strikes aim straight ahead; `target` is 2D-only. Shared 3D scenes accept
+the same actions per actor, plus `delay` to start an action later in the range
+(see [Shared 3D scenes](SPATIAL-SCENES.md)); [agent-spatial-fight.json](../examples/agent-spatial-fight.json)
+syncs a punch, kick and their hit reactions under a moving scene camera.
 
 ## Running
 

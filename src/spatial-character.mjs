@@ -100,14 +100,17 @@ export function spatialHumanMotion(figure,object,options,fps,planarFactory){
   if(object.len_flag&&figure.segments.some((s,i)=>Math.abs(object.lengths[i]-s.length)>1e-6)||Object.values(object._stykSpatial?.shape??{}).some(s=>(s.width??1)!==1||(s.taper??0)!==0))throw new Error('Restore the character’s original bone proportions before generating spatial motion.');
   if(Object.values(object._stykIK??{}).some(c=>c.enabled&&c.pinned))throw new Error('Release spatial IK pins before generating character motion.');
   if(options.cloth&&options.cloth!==false)throw new Error('Planar cloth deformation cannot be applied to a spatial character.');
-  if(ACTION_MOTIONS.includes(options.action))throw new Error('Jump, punch, kick and hit motions are available for 2D characters.');
+  const acting=ACTION_MOTIONS.includes(options.action);
+  if(acting&&options.target!==undefined)throw new Error('3D strikes aim along the character’s heading; target is available for 2D characters.');
+  if(acting&&options.facing!==undefined&&![1,-1].includes(options.facing))throw new Error('facing is 1 or -1 for jump, punch, kick or hit motion.');
   const validateView=view=>{if(!view||typeof view!=='object'||Array.isArray(view))throw new Error('view must be an object.');for(const key of Object.keys(view))if(!['yaw','pitch','roll','headYaw','headPitch','orbitYaw','orbitPitch','perspective','distance'].includes(key))throw new Error(`Unknown orbit view: ${key}`);const {orbitYaw,orbitPitch,...native}=view;characterViewPose(figure,object,native);if(orbitYaw!==undefined)finite(orbitYaw,'orbitYaw',-Math.PI*4,Math.PI*4);if(orbitPitch!==undefined)finite(orbitPitch,'orbitPitch',-Math.PI/2+.05,Math.PI/2-.05);};
   if(options.view)validateView(options.view);if(options.viewTo)validateView(options.viewTo);
-  const sourceView=characterView(figure,object),direction=Math.sign(options.distance??0)||1;
+  const sourceView=characterView(figure,object),direction=acting?1:Math.sign(options.distance??0)||1;
   const turning=options.action==='turn';
   const moving=['walk','run'].includes(options.action??'walk')||options.action==='carry'&&Math.abs(options.distance??0)>1e-6;
-  const standing=!moving&&!turning&&options.action!=='putDown'&&!(options.carry?.weight>0);
-  const base={...sourceView,yaw:moving?direction*Math.PI/2:sourceView.yaw,orbitYaw:0,orbitPitch:0,...options.view},end={...base,...options.viewTo};
+  const standing=!moving&&!turning&&!acting&&options.action!=='putDown'&&!(options.carry?.weight>0);
+  // Actions are planned in the body's own sagittal plane: forward is the heading, `facing` picks a profile.
+  const base={...sourceView,yaw:moving?direction*Math.PI/2:acting&&options.facing!==undefined?options.facing*Math.PI/2:sourceView.yaw,orbitYaw:0,orbitPitch:0,...options.view},end={...base,...options.viewTo};
   const ids=role=>roles.get(role).segment.segment_id,restAngles=[-Math.PI/2,-Math.PI/2,-Math.PI/2,1.12,1.3,2.02,1.84,1.3,1.52,1.84,1.62,0,0];
   const proxy={figure_type_id:figure.figure_type_id,name:figure.name,segments:[{...figure.segments[0],_stykRig:undefined},...anatomy.map((role,i)=>{
     const s=roles.get(role).segment,parent=[0,ids('spine0'),ids('spine1'),ids('spine1'),ids('leftUpperArm'),ids('spine1'),ids('rightUpperArm'),0,ids('leftThigh'),0,ids('rightThigh'),ids('leftShin'),ids('rightShin')][i];
@@ -115,13 +118,15 @@ export function spatialHumanMotion(figure,object,options,fps,planarFactory){
   })],polyfills:[],image_assets:[],text_assets:[],_styk:{footSole:18}};
   const proxyObject=createObject(proxy,object.unique_id,object.root_x,object.root_y,{scale:object.scale}),{view,viewTo,cloth,collisions=options.action!=='reach',...motionOptions}=options;
   if(typeof collisions!=='boolean')throw new TypeError('Character collisions must be true or false.');
-  const planar=planarFactory(proxy,proxyObject,{...motionOptions,...(turning?{action:'idle'}:{}),rig,cloth:false},fps);
+  const planar=planarFactory(proxy,proxyObject,{...motionOptions,...(turning?{action:'idle'}:{}),...(acting?{facing:1}:{}),rig,cloth:false},fps);
+  // Action travel follows the body heading at that moment; walking uses its integrated arc-length path.
+  const actionPath=(tick,yaw)=>{const s=planar.sample(tick).pose.root_x-planar.root.x;return [Math.sin(yaw)*s,0,Math.cos(yaw)*s];};
   const reachSource=options.action==='reach'?planarFactory(proxy,proxyObject,{...motionOptions,action:'idle',rig,cloth:false},fps):null;
   const meshless={...figure,_styk:{...figure._styk,spatialMesh:undefined}};
   const ik=ikLayout(figure),locomotion=createSpatialLocomotion(planar,base,end,{moving,turning,scale:object.scale,rootY:object.root_y});
-  return {rig,pathAt:tick=>locomotion.path(tick/(planar.settings.duration-1)),settings:{...planar.settings,action:turning?'turn':planar.settings.action},sample(tick){
+  return {rig,events:planar.events,pathAt:tick=>acting?actionPath(tick,locomotion.views(tick/(planar.settings.duration-1)).yaw):locomotion.path(tick/(planar.settings.duration-1)),settings:{...planar.settings,action:turning?'turn':planar.settings.action},sample(tick){
     const sampled=planar.sample(tick),idleArms=reachSource?.sample(tick),u=tick/(planar.settings.duration-1),smooth=u*u*(3-2*u),v={};for(const key of Object.keys(base))v[key]=base[key]+(end[key]-base[key])*smooth;
-    Object.assign(v,locomotion.views(u));
+    Object.assign(v,locomotion.views(u));v.torsoYaw+=sampled.twist??0;
     const pose=snapshotPoseObject(object),absolute=new Map([['model',0]]);pose.angles=object.angles.slice();pose.len_flag=0;pose.lengths=[];pose.bend_flag=0;pose.bends=[];
     for(const {segment,index}of roles.values()){pose.angles[index]=segment.angle_rad;pose.angles[indices.get(segment._stykRig.spatial.turn)]=0;pose.angles[indices.get(segment._stykRig.spatial.pitch)]=0;}
     for(const [i,role]of anatomy.entries()){
@@ -138,7 +143,7 @@ export function spatialHumanMotion(figure,object,options,fps,planarFactory){
     pose.angles[indices.get(model._stykRig.spatial.pitch)]=orientation.pitch;
     pose.angles[indices.get(head._stykRig.spatial.turn)]=v.headYaw;
     pose.angles[indices.get(head._stykRig.spatial.pitch)]+=v.headPitch;
-    const footStates={},travel=locomotion.path(u),sway=(moving?sampled.support:0)*2*object.scale;
+    const footStates={},travel=acting?actionPath(tick,v.yaw):locomotion.path(u),sway=(moving?sampled.support:0)*2*object.scale;
     const world=[travel[0]+Math.cos(v.yaw)*sway,sampled.pose.root_y-object.root_y,travel[2]-Math.sin(v.yaw)*sway];
     if(standing){const upright=planar.ground-object.root_y-(18+103*.9995)*object.scale;world[1]+=(upright-world[1])*sampled.entry;}
     if(moving||turning||standing)for(const side of ['left','right']){

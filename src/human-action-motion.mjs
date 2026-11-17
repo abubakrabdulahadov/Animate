@@ -59,6 +59,8 @@ const HANG={f:.04,d:.98},GUARD={f:.26,d:-.06},GUARD_REAR={f:.3,d:.02};
  * front, intensity, height, distance, hand, foot, target and the entry weight.
  * Returned hands are {f,d} fractions of arm reach from the shoulder, f along the
  * facing direction and d downward; `to`/`toWeight` pull a hand toward a world target.
+ * `twist` is a torso turn in radians for 3D characters (positive brings the right
+ * shoulder forward); planar figures have no depth to show it.
  */
 export function sampleAction(action,u,c){
   const L=c.legLength,dir=c.direction,I=Math.min(c.intensity,1.5);
@@ -97,8 +99,8 @@ export function sampleAction(action,u,c){
     const feet={};for(const side of ['left','right'])feet[side]={...restBlend(side,stanceX[side],c.ground),planted};
     const lead=track([[0,HANG],[G,GUARD],[W,{f:.1,d:0}],[R,GUARD],[1,GUARD]],u);
     const rear=track([[0,HANG],[G,GUARD_REAR],[S,{f:.18,d:.06}],[R,GUARD_REAR],[1,GUARD_REAR]],u);
-    const other=c.hand==='left'?'right':'left';
-    return {x,y,lean,head:-lean*.5,feet,hands:{[c.hand]:{...lead,to:c.target,reach:c.target?null:{f:.97,d:-.02},toWeight:strike,lower:true},[other]:{...rear,lower:true}},airborne:false,legBend:-dir};
+    const other=c.hand==='left'?'right':'left',twist=(c.hand==='left'?-1:1)*track([[0,0],[G,.1],[W,-.25],[S,.5*I],[H,.45*I],[R,.1],[1,.1]],u);
+    return {x,y,lean,twist,head:-lean*.5,feet,hands:{[c.hand]:{...lead,to:c.target,reach:c.target?null:{f:.97,d:-.02},toWeight:strike,lower:true},[other]:{...rear,lower:true}},airborne:false,legBend:-dir};
   }
   if(action==='kick'){
     const {guard:G,chamber:C,impact:X,hold:H,rechamber:Rc,down:D}=KICK,kicker=c.foot,support=kicker==='left'?'right':'left';
@@ -120,7 +122,8 @@ export function sampleAction(action,u,c){
     if(free&&length>limit)foot={x:x+dx*limit/length,y:y+dy*limit/length};
     const feet={[support]:{...restBlend(support,stanceX[support],c.ground),planted},[kicker]:{...foot,planted:!free&&planted,free}};
     const balance=track([[0,HANG],[G,GUARD],[X,{f:-.3,d:.6}],[Rc,GUARD],[1,GUARD]],u),guard=track([[0,HANG],[G,GUARD_REAR],[X,{f:.32,d:-.1}],[1,GUARD_REAR]],u);
-    return {x,y,lean,head:-lean*.4,feet,hands:{[kicker]:{...balance,lower:true},[support]:{...guard,lower:true}},airborne:false,legBend:-dir};
+    const twist=(kicker==='left'?-1:1)*track([[0,0],[G,0],[X,-.3*I],[H,-.28*I],[D,0],[1,0]],u);
+    return {x,y,lean,twist,head:-lean*.4,feet,hands:{[kicker]:{...balance,lower:true},[support]:{...guard,lower:true}},airborne:false,legBend:-dir};
   }
   if(action==='hit'){
     const P=HIT.peak,D=c.distance;
@@ -131,7 +134,8 @@ export function sampleAction(action,u,c){
     const step=(side,a,b)=>{const p=ease((u-a)/(b-a)),start=restBlend(side,stanceX[side],c.ground);return {x:start.x+D*p,y:start.y-.12*L*Math.sin(Math.PI*p),planted:planted&&(u<=a||u>=b),free:u>a&&u<b};};
     const feet={[c.front]:step(c.front,.12,.38),[back]:step(back,.3,.52)};
     const flail=v=>track([[0,GUARD],[P,{f:.55,d:-.35}],[.45,{f:.35,d:.3}],[.8,GUARD],[1,GUARD]],v);
-    return {x,y,lean,head:-lean*.3+snap,feet,hands:{[c.front]:{...flail(u),lower:true},[back]:{...flail(u-.03),lower:true}},airborne:false,legBend:-dir};
+    const twist=track([[0,0],[P,.35*I],[.45,-.1],[.8,0],[1,0]],u);
+    return {x,y,lean,twist,head:-lean*.3+snap,feet,hands:{[c.front]:{...flail(u),lower:true},[back]:{...flail(u-.03),lower:true}},airborne:false,legBend:-dir};
   }
   throw new Error(`Unknown action motion: ${action}`);
 }
