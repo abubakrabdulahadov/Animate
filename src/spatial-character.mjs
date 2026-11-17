@@ -1,3 +1,4 @@
+import {ACTION_MOTIONS} from './human-action-motion.mjs';
 import {createObject,createFrame} from './demo.mjs';
 import {buildGeometry} from './pivot/geometry.mjs';
 import {snapshotPoseObject} from './pose-snapshot.mjs';
@@ -99,6 +100,7 @@ export function spatialHumanMotion(figure,object,options,fps,planarFactory){
   if(object.len_flag&&figure.segments.some((s,i)=>Math.abs(object.lengths[i]-s.length)>1e-6)||Object.values(object._stykSpatial?.shape??{}).some(s=>(s.width??1)!==1||(s.taper??0)!==0))throw new Error('Restore the character’s original bone proportions before generating spatial motion.');
   if(Object.values(object._stykIK??{}).some(c=>c.enabled&&c.pinned))throw new Error('Release spatial IK pins before generating character motion.');
   if(options.cloth&&options.cloth!==false)throw new Error('Planar cloth deformation cannot be applied to a spatial character.');
+  if(ACTION_MOTIONS.includes(options.action))throw new Error('Jump, punch, kick and hit motions are available for 2D characters.');
   const validateView=view=>{if(!view||typeof view!=='object'||Array.isArray(view))throw new Error('view must be an object.');for(const key of Object.keys(view))if(!['yaw','pitch','roll','headYaw','headPitch','orbitYaw','orbitPitch','perspective','distance'].includes(key))throw new Error(`Unknown orbit view: ${key}`);const {orbitYaw,orbitPitch,...native}=view;characterViewPose(figure,object,native);if(orbitYaw!==undefined)finite(orbitYaw,'orbitYaw',-Math.PI*4,Math.PI*4);if(orbitPitch!==undefined)finite(orbitPitch,'orbitPitch',-Math.PI/2+.05,Math.PI/2-.05);};
   if(options.view)validateView(options.view);if(options.viewTo)validateView(options.viewTo);
   const sourceView=characterView(figure,object),direction=Math.sign(options.distance??0)||1;

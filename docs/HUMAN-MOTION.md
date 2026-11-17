@@ -1,6 +1,6 @@
 # Human motion
 
-The native `Editor` can generate coordinated walking, running, breathing, waving, reaching and carrying for an ordinary planar humanoid. It writes editable pose keys using the
+The native `Editor` can generate coordinated walking, running, breathing, waving, reaching and carrying, plus jumps, punches, kicks and hit reactions, for an ordinary planar humanoid. It writes editable pose keys using the
 existing document, IK solver and command history. It is available through the
 engine and agent API; there is no new toolbar or automatic alteration of existing
 animation.
@@ -54,16 +54,19 @@ The implementation uses StykAnimate's existing solver and native pose semantics.
 
 | Field | Meaning |
 | --- | --- |
-| `action` | `walk` (default), `run`, `idle`, `wave`, `reach`, `carry`, `putDown`; spatial cartoon characters also accept `turn`. |
+| `action` | `walk` (default), `run`, `idle`, `wave`, `reach`, `carry`, `putDown`, and for 2D figures `jump`, `punch`, `kick`, `hit`; spatial cartoon characters also accept `turn`. |
 | `start` | Zero-based tick; defaults to the playhead. A start beyond the tail uses the last visible pose. |
 | `duration` | Number of output ticks, 2–2400; default is approximately two seconds at the document FPS. |
-| `distance` | Signed scene-pixel travel for walk/run/carry; defaults to twice leg reach for walk and five times for run. Standing actions use zero. |
+| `distance` | Signed scene-pixel travel for walk/run/carry/jump/hit; defaults to twice leg reach for walk, five times for run, zero for jump and a 0.35-leg knockback for hit. Other standing actions use zero. |
 | `stepLength` | Maximum scene-pixel step spacing, 12%–55% of leg length for walking (default 48%), up to 85% for running (default 65%). Actual spacing shortens to complete the final stride. |
 | `groundY` | World-space floor height; default is the lower sole height (the ankle for ordinary stick rigs). An explicit height places the character on that floor. |
 | `intensity` | 0–1.5, default 1; secondary motion strength. |
 | `blend` | Seconds of soft entrance/settling, 0–2; default 0.25; unloaded idle defaults to zero for an immediately upright stance. Locomotion contacts are not marked planted during the initial pose transition. |
-| `hand` | `left` or `right` for wave/reach, default `right`; refers to rig roles. |
-| `target` | Required world-space `{x,y}` for reach. Targets outside arm reach stop at the limb's reach without stretching. |
+| `hand` | `left` or `right` for wave/reach/punch, default `right`; refers to rig roles. |
+| `target` | Required world-space `{x,y}` for reach; optional for punch/kick. Targets outside reach stop at the limb's reach without stretching. |
+| `facing` | `1` or `-1` for jump/punch/kick/hit. Defaults to the target side, the jump travel direction, or `1`. |
+| `height` | Jump apex rise of the pelvis in scene pixels, 10%–200% of leg length; default 55%. |
+| `foot` | `left` or `right` kicking foot, default `right`. |
 | `after` | `hold` (default) keeps the generated final pose until a later existing key. `restore` adds the original pose at the exclusive end when the original animation continues. |
 | `rig` | Optional explicit native handle mapping below. |
 | `carry` | `{hand:'left'\|'right'\|'both', forward?, height?, weight?, loadHeight?}` keeps a carrying grip during walk/idle; fractions default to .45/.32 of arm reach. |
@@ -169,7 +172,7 @@ samples. These are authoring limits, not a guarantee on total process memory.
 ## Verification
 
 ```sh
-node --test tests/human-motion.test.mjs
+node --test tests/human-motion.test.mjs tests/action-motion.test.mjs
 node tests/human-motion.browser.mjs
 node scripts/smoke-human-motion.mjs
 ```
@@ -180,6 +183,43 @@ uses the existing local backend test host. The smoke script exports an 18-second
 comparison and gesture demo, plus an editable STYK project and decoded contact
 sheet, to `artifacts/human-motion/`. It requires Chromium, FFmpeg and FFprobe.
 Reported timings describe the named fixture and machine only.
+
+## Actions
+
+`jump`, `punch`, `kick` and `hit` give agents a stylized action vocabulary for
+short fights and stunts on 2D figures. Each uses pose-to-pose keys joined by
+cubic Hermite curves, so motion flows through anticipation, the main action and
+follow-through instead of stopping at every key; strikes use a fast ease-out.
+
+- `jump` crouches, accelerates into take-off, follows a ballistic arc with tucked
+  legs and swinging arms, squashes on landing and stands. Horizontal travel is
+  constant in the air and `distance` is exact. Minimum 16 ticks.
+- `punch` raises a guard in a fighting stance, winds up, strikes `target` (or
+  straight ahead at shoulder height) with a weight shift and torso lean, holds,
+  and returns to guard. The punching hand's opposite foot leads. Minimum 12 ticks.
+- `kick` shifts weight onto the support foot, chambers the knee, extends the
+  kicking foot to `target` (default: hip height ahead) while the torso leans back,
+  rechambers and plants it. The support foot stays planted; kick targets are kept
+  inside leg reach. Minimum 14 ticks.
+- `hit` snaps the torso and head away from `facing`, slides by `distance`, steps
+  both feet back and recovers into a guard. `blend` defaults to 0.05 s so the
+  reaction is immediate. Minimum 8 ticks.
+
+The sampler, `previewHumanMotion` and `applyHumanMotion` report timing `events`:
+`takeoff`/`land` for jumps, `impact` for punches and kicks, and `recoil` for hits.
+`applyHumanMotion` returns absolute ticks. Use them to start the opponent's `hit`,
+an `impact` camera motion, a `Hit flash` effect clip or a sound on the exact frame:
+
+```js
+const {events:[impact]}=await editor.applyHumanMotion({action:'punch',start:36,duration:24});
+editor.select(opponent);
+await editor.applyHumanMotion({action:'hit',start:impact.tick,duration:24,facing:-1});
+editor.addCameraMotion('impact',{start:impact.tick,duration:8});
+```
+
+See [the stick fight example](../examples/agent-stick-fight.json), which exports an
+MP4 directly. Spatial 3D characters reject these actions with an explanatory error;
+the shared 3D locomotion adapter plans grounded feet only.
 
 ## Running
 

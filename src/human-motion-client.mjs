@@ -10,7 +10,7 @@ export async function prepareHumanMotion(input,{signal}={}) {
       signal?.throwIfAborted();poses.push(motion.sample(tick).pose);
       if(performance.now()-yielded>6){await new Promise(resolve=>setTimeout(resolve,0));yielded=performance.now();}
     }
-    signal?.throwIfAborted();return {poses,rig:motion.rig};
+    signal?.throwIfAborted();return {poses,rig:motion.rig,events:motion.events??[]};
   }
   const worker=new Worker(new URL('./human-motion-worker.mjs',import.meta.url),{type:'module',name:'StykAnimate human motion'});
   let abort,timer;

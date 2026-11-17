@@ -41,7 +41,7 @@ export function poseMotionContext(editor,options={},editing=false,humanoid=true)
 
 export const editorHumanMotionMethods={
   getHumanRig(mapping){const c=poseMotionContext(this,{rig:mapping});return humanRig(c.input.figure,mapping);},
-  previewHumanMotion(options={},tick=0){const c=poseMotionContext(this,options),motion=createHumanMotion(c.input.figure,c.input.object,options,c.input.fps);return {rig:motion.rig,...motion.sample(tick)};},
+  previewHumanMotion(options={},tick=0){const c=poseMotionContext(this,options),motion=createHumanMotion(c.input.figure,c.input.object,options,c.input.fps);return {rig:motion.rig,events:motion.events??[],...motion.sample(tick)};},
   async applyHumanMotion(options={}, {signal}={}){return applyPoseMotion(this,options,{signal});},
 };
 
@@ -106,6 +106,6 @@ export async function applyPoseMotion(editor,options={}, {signal,prepare=prepare
       recordAnimation(editor,label,draft,selection,{frameSourceChanges,hadFrameSourceTable:Object.hasOwn(report._styk,'frameSources')});
     }
     editor.seek(c.start);editor.select(c.uid);
-    return {uid:c.uid,start:c.start,end,frames:prepared.poses.length,rig:prepared.rig};
+    return {uid:c.uid,start:c.start,end,frames:prepared.poses.length,rig:prepared.rig,events:(prepared.events??[]).map(e=>({...e,tick:c.start+e.tick}))};
   }finally{editor.removeEventListener('change',cancel);}
 }

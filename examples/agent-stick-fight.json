@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "name": "Stick fight with impacts",
+  "commands": [
+    {"op": "project", "width": 960, "height": 540, "fps": 24},
+    {"op": "background", "argb": 4294110950},
+    {"op": "addFigure"},
+    {"op": "move", "uid": 1, "dx": -180, "dy": 0},
+    {"op": "addFigure"},
+    {"op": "move", "uid": 2, "dx": 120, "dy": 0},
+    {"op": "call", "method": "applyHumanMotion", "args": [{"action": "idle", "start": 0, "duration": 36, "groundY": 450}], "selection": {"uid": 2}},
+    {"op": "call", "method": "applyHumanMotion", "args": [{"action": "run", "start": 0, "duration": 36, "distance": 150, "groundY": 450}], "selection": {"uid": 1}},
+    {"op": "call", "method": "applyHumanMotion", "args": [{"action": "punch", "start": 36, "duration": 24, "hand": "right"}], "selection": {"uid": 1}},
+    {"op": "call", "method": "applyHumanMotion", "args": [{"action": "hit", "start": 46, "duration": 24, "facing": -1}], "selection": {"uid": 2}},
+    {"op": "call", "method": "addCameraMotion", "args": ["impact", {"start": 46, "duration": 8}]},
+    {"op": "call", "method": "addVfxGroup", "args": [{"kind": "figure", "uid": 2}, "Hit flash", {"start": 46, "duration": 3}]},
+    {"op": "call", "method": "applyHumanMotion", "args": [{"action": "kick", "start": 60, "duration": 30, "foot": "right"}], "selection": {"uid": 1}},
+    {"op": "call", "method": "applyHumanMotion", "args": [{"action": "hit", "start": 74, "duration": 30, "facing": -1, "distance": 70, "intensity": 1.3}], "selection": {"uid": 2}},
+    {"op": "call", "method": "addCameraMotion", "args": ["impact", {"start": 74, "duration": 10}]},
+    {"op": "call", "method": "addVfxGroup", "args": [{"kind": "figure", "uid": 2}, "Hit flash", {"start": 74, "duration": 3}]},
+    {"op": "call", "method": "applyHumanMotion", "args": [{"action": "jump", "start": 90, "duration": 36, "height": 90}], "selection": {"uid": 1}}
+  ],
+  "output": "agent-stick-fight.mp4"
+}

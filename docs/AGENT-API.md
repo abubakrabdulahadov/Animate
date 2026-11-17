@@ -107,7 +107,7 @@ colors use native COLORREF. Use the typed style commands when possible.
 | `movieclips` | Create, enter/leave, edit playback, split, make unique, expand and bake nested animation. |
 | `audio` | Tracks, clips, timing, trims, fades, gains, mute/solo, splitting, duplication and clipboards. |
 | `history` | Existing undo and redo. |
-| `human` | Discover a humanoid rig, preview poses, and generate walking, running, breathing, waving, reaching or carrying. |
+| `human` | Discover a humanoid rig, preview poses, and generate walking, running, breathing, waving, reaching, carrying, jumps, punches, kicks and hit reactions with impact timing. |
 | `cloth` | Create dense editable scarves/capes/skirts, preview deformation, and bake cloth over existing motion. |
 | `cartoon` | Create filled 2D/3D characters, set body/head views and perspective, and create filled UI-style graphics. |
 
@@ -203,7 +203,8 @@ Advanced calls are awaited, including asynchronous baking and in-between work.
 `editor_applyHumanMotion` generates coordinated 2D character motion as editable
 pose keys in one undo step. See [Human motion](HUMAN-MOTION.md) and
 [agent-human-motion.json](../examples/agent-human-motion.json) for options and rig
-mapping. Discover these tools with `--tools human`.
+mapping, and [agent-stick-fight.json](../examples/agent-stick-fight.json) for a
+short fight synced to camera impacts and hit flashes. Discover these tools with `--tools human`.
 The final advanced command's result is returned in the job's `result` field.
 Batch export settings go in the existing `video` field, including `tick` for
 PNG/SVG output; for example `"video":{"width":1280,"height":720,"audio":true}`.
