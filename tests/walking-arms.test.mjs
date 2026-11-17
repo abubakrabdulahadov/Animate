@@ -48,7 +48,7 @@ test('carrying keeps its supporting grip while the empty arm relaxes, including 
 });
 
 test('spatial walking uses the same shallow forward bend after body and camera turns',()=>{
- const {figure}=createCartoonCharacter({dimension:'3d'}),o=createObject(figure,1,300,300),roles=characterBones(figure);
+ const {figure}=createCartoonCharacter({dimension:'3d',style:'cartoon'}),o=createObject(figure,1,300,300),roles=characterBones(figure);
  for(const distance of [160,-160])for(const yaw of [0,Math.PI/2,Math.PI]){
   const m=createHumanMotion(figure,o,{duration:72,distance,view:{yaw,orbitYaw:.4,orbitPitch:.2}});
   for(const tick of [20,40,60,71]){const g=geometry(figure,m.sample(tick).pose),q=g.segments[roles.get('model').index].spatialFrame.q;

@@ -27,7 +27,7 @@ test('planar shoes cover the trouser end and plant their soles rather than ankle
 });
 
 test('spatial cartoon uses a compact existing native mesh rig with physical feet and facial depth',()=>{
- const {figure,rig}=createCartoonCharacter({dimension:'3d'}),object=createObject(figure,1,300,300),mesh=figure._styk.spatialMesh;
+ const {figure,rig}=createCartoonCharacter({dimension:'3d',style:'cartoon'}),object=createObject(figure,1,300,300),mesh=figure._styk.spatialMesh;
  validateScene({...emptyDocument(),figure_types:[figure],keyframes:[createFrame([object])]});
  assert.ok(figure.segments.length<60);assert.ok(mesh.positions.length/3>5000);assert.ok(mesh.indices.length/3<15000);assert.deepEqual(humanRig(figure),rig);
  assert.ok(mesh.groups.some(g=>g.name==='Back seam'));assert.ok(mesh.groups.some(g=>g.name==='Front pocket'));assert.ok(mesh.basis.includes(figure.segments[0].segment_id));
@@ -35,25 +35,25 @@ test('spatial cartoon uses a compact existing native mesh rig with physical feet
 });
 
 test('3D characters show an uncovered face, share one shading level per quad and fit eight-actor scenes',()=>{
- const mesh=createCartoonCharacter({dimension:'3d'}).figure._styk.spatialMesh,group=name=>mesh.groups.filter(g=>g.name===name);
+ const mesh=createCartoonCharacter({dimension:'3d',style:'cartoon'}).figure._styk.spatialMesh,group=name=>mesh.groups.filter(g=>g.name===name);
  for(const name of ['Head','Hair','Eye white','Pupil','Mouth','Cheek','Belt','left hand','left thumb','left sole'])assert.ok(group(name).length,name);
  const head=group('Head')[0];let quads=0;for(let t=head.start;t<head.start+head.count-1;t++){const a=new Set(mesh.indices.slice(t*3,t*3+3)),shared=mesh.indices.slice(t*3+3,t*3+6).filter(i=>a.has(i));if(shared.length===2&&Math.abs(shared[0]-shared[1])===28){quads++;assert.equal(mesh.materials[t],mesh.materials[t+1],'Quad halves share a shade');}}assert.ok(quads>300);
  const hair=group('Hair')[0],face=[];for(let t=hair.start;t<hair.start+hair.count;t++)for(let k=0;k<3;k++){const i=mesh.indices[t*3+k];face.push(mesh.positions.slice(i*3,i*3+3));}
  assert.ok(face.every(([x,y,z])=>!(z>18&&Math.abs(x)<20&&y>-120&&y<-84)),'Hair must leave the eyes, nose and mouth visible');
  let bottom=-Infinity;for(let i=1;i<mesh.positions.length;i+=3)bottom=Math.max(bottom,mesh.positions[i]);close(bottom,121);
  assert.ok(mesh.colors.length<=128,'Eight scene actors must fit the 1024-color native palette');
- const flat=createCartoonCharacter({dimension:'3d'},{shading:false}).figure._styk.spatialMesh;assert.ok(flat.colors.length<40);assert.equal(flat.indices.length,mesh.indices.length);
+ const flat=createCartoonCharacter({dimension:'3d',style:'cartoon'},{shading:false}).figure._styk.spatialMesh;assert.ok(flat.colors.length<40);assert.equal(flat.indices.length,mesh.indices.length);
 });
 
 test('new characters own their rest frames and toe controls lie at the shoe tip',()=>{
- const a=createCartoonCharacter({dimension:'3d'}),b=createCartoonCharacter({dimension:'3d'}),first=characterBones(a.figure),second=characterBones(b.figure);
+ const a=createCartoonCharacter({dimension:'3d',style:'cartoon'}),b=createCartoonCharacter({dimension:'3d',style:'cartoon'}),first=characterBones(a.figure),second=characterBones(b.figure);
  first.get('spine0').segment._stykRig.spatial.origin[0]=55;assert.equal(second.get('spine0').segment._stykRig.spatial.origin[0],0);
  const object=createObject(b.figure,1,300,300),g=geometry(b.figure,object);
  for(const [side,x]of [['left',15],['right',-15]]){const foot=second.get(`${side}Foot`),frame=g.segments[foot.index].spatialFrame,p=spatialPoint(frame,[x,111,37]),toe=g.joints.get(foot.segment.segment_id);close(toe.x,300+p[0]);close(toe.y,300+p[1]);}
 });
 
 test('body/head yaw are independent and native projected shoe vertices stay on the physical floor',()=>{
- const {figure}=createCartoonCharacter({dimension:'3d'}),o=createObject(figure,1,300,300);
+ const {figure}=createCartoonCharacter({dimension:'3d',style:'cartoon'}),o=createObject(figure,1,300,300);
  for(const distance of [200,-200])for(const yaw of [0,Math.PI/2,Math.PI,-Math.PI/2]){
   const motion=createHumanMotion(figure,o,{action:'walk',duration:96,distance,groundY:520,view:{yaw,headYaw:.35,perspective:0}});
   for(const tick of [20,40,60,80]){const s=motion.sample(tick),g=geometry(figure,s.pose),positions=g.spatialMesh.positions;
@@ -65,7 +65,7 @@ test('body/head yaw are independent and native projected shoe vertices stay on t
 });
 
 test('camera orbit composes in camera coordinates rather than leaning along the character heading',()=>{
- const {figure}=createCartoonCharacter({dimension:'3d'}),o=createObject(figure,1,300,300),roles=characterBones(figure);
+ const {figure}=createCartoonCharacter({dimension:'3d',style:'cartoon'}),o=createObject(figure,1,300,300),roles=characterBones(figure);
  const yaw=1.1,orbitYaw=.35,orbitPitch=.3,m=createHumanMotion(figure,o,{action:'idle',duration:60,view:{yaw,orbitYaw,orbitPitch,perspective:0}}),sample=m.sample(30),g=geometry(figure,sample.pose);
  const frame=g.segments[roles.get('model').index].spatialFrame,actual=spatialPoint(frame,[0,-100,0]);
  const expected=quatRotate(quatMultiply(spatialQuaternion(0,0,-orbitPitch),spatialQuaternion(0,yaw-orbitYaw,0)),[0,-100,0]);
@@ -73,13 +73,13 @@ test('camera orbit composes in camera coordinates rather than leaning along the 
 });
 
 test('source poses and random access remain immutable during orbital carrying',()=>{
- const {figure}=createCartoonCharacter({dimension:'3d'}),o=createObject(figure,1,300,300),before=structuredClone(o),m=createHumanMotion(figure,o,{action:'carry',hand:'both',distance:150,duration:72,view:{orbitYaw:-.5,perspective:.5},viewTo:{orbitYaw:2.5,orbitPitch:.25,headYaw:.4}});
+ const {figure}=createCartoonCharacter({dimension:'3d',style:'cartoon'}),o=createObject(figure,1,300,300),before=structuredClone(o),m=createHumanMotion(figure,o,{action:'carry',hand:'both',distance:150,duration:72,view:{orbitYaw:-.5,perspective:.5},viewTo:{orbitYaw:2.5,orbitPitch:.25,headYaw:.4}});
  const a=m.sample(48);m.sample(2);assert.deepEqual(m.sample(48),a);assert.deepEqual(o,before);assert.equal(Object.keys(a.grips).length,2);
  const g=geometry(figure,a.pose);for(const [side,p]of Object.entries(a.grips)){const actual=g.joints.get(m.rig[`${side}Arm`][1]);close(p.x,actual.x);close(p.y,actual.y);}
 });
 
 test('spatial reach retains scene-space target semantics after turning and perspective',()=>{
- const {figure}=createCartoonCharacter({dimension:'3d'}),o=createObject(figure,1,300,300);
+ const {figure}=createCartoonCharacter({dimension:'3d',style:'cartoon'}),o=createObject(figure,1,300,300);
  for(const yaw of [0,.8,Math.PI/2,Math.PI]){
   const facing=characterViewPose(figure,o,{yaw,perspective:.5}),g=geometry(figure,facing),rig=humanRig(figure),wrist=g.joints.get(rig.rightArm[1]),target={x:wrist.x+12,y:wrist.y-24};
   const m=createHumanMotion(figure,facing,{action:'reach',hand:'right',duration:60,target,view:{yaw,perspective:.5}}),s=m.sample(35),actual=geometry(figure,s.pose).joints.get(rig.rightArm[1]);
@@ -96,7 +96,7 @@ test('view edits and generated spatial motion are undoable and survive both nati
 });
 
 test('anatomy follows remapped native IDs, not bone array positions',()=>{
- const {figure}=createCartoonCharacter({dimension:'3d'}),map=new Map(figure.segments.map(s=>[s.segment_id,s.segment_id*7]));
+ const {figure}=createCartoonCharacter({dimension:'3d',style:'cartoon'}),map=new Map(figure.segments.map(s=>[s.segment_id,s.segment_id*7]));
  figure._styk.spatialMesh=remapSpatialMesh(figure._styk.spatialMesh,map);
  for(const s of figure.segments){remapRigReferences(s,map);s.segment_id=map.get(s.segment_id);s.parent_id=map.get(s.parent_id)??0;}
  const m=createHumanMotion(figure,createObject(figure,1,300,300),{action:'carry',duration:48});assert.ok(m.sample(20).pose.angles.every(Number.isFinite));
@@ -116,18 +116,20 @@ test('invalid views, unsupported planar cloth, stale edits and cancelled worker 
  const stale=e.applyHumanMotion({duration:1200,distance:500});e.setFPS(30);await assert.rejects(stale,{name:'AbortError'});assert.equal(e.report.fps,30);assert.equal(e.selectedUid,added.value.uid);
 });
 
-test('3D stickmen use one solid color, straight rigid sticks and the shared motion rig',async()=>{
+test('3D stickmen use one solid color, smoothly blended joints and the shared motion rig',async()=>{
  const {STICK_COLORS}=await import('../src/filled-art.mjs');
  for(const color of ['black','white','red','yellow','green','gray','#123456']){
   const {figure,rig}=createCartoonCharacter({dimension:'3d',style:'stick',color}),mesh=figure._styk.spatialMesh,base=color.startsWith('#')?color:STICK_COLORS[color];
   assert.equal(figure._styk.stickStyle,1);assert.deepEqual(humanRig(figure),rig);
   assert.ok(mesh.colors.length<=14,'One color with its shading levels');
   const rgb=[1,3,5].map(i=>parseInt(base.slice(i,i+2),16));assert.ok(mesh.colors.every(c=>c.every((v,i)=>v<=rgb[i]+16&&v>=rgb[i]*.45)),'Every palette entry is a shade of the chosen color');
-  for(let v=0;v<mesh.weights.length;v+=4)assert.deepEqual(mesh.weights.slice(v,v+4),[1,0,0,0],'Rigid sticks stay straight');
+  let blended=0;for(let v=0;v<mesh.weights.length;v+=4){const w=mesh.weights.slice(v,v+4);close(w.reduce((n,x)=>n+x,0),1,1e-9);assert.ok(w[2]===0&&w[3]===0,'At most two bones per vertex');if(w[1]>0)blended++;}
+  assert.ok(blended>500,'Joints blend smoothly between their two bones');
   let bottom=-Infinity;for(let i=1;i<mesh.positions.length;i+=3)bottom=Math.max(bottom,mesh.positions[i]);close(bottom,121);
   assert.ok(!mesh.groups.some(g=>['Eye white','Hair','Mouth'].includes(g.name)),'No face details');
  }
- for(const bad of [{style:'stick'},{dimension:'3d',color:'red'},{dimension:'3d',style:'stick',color:'sparkly'},{dimension:'3d',style:'blob'}])assert.throws(()=>createCartoonCharacter(bad));
+ assert.equal(createCartoonCharacter({dimension:'3d'}).figure._styk.stickStyle,1,'3D characters default to stickmen');assert.equal(createCartoonCharacter({dimension:'3d',palette:{shirt:'#336699'}}).figure._styk.stickStyle,undefined,'A palette implies a cartoon');
+ for(const bad of [{style:'stick'},{dimension:'2d',color:'red'},{dimension:'3d',style:'stick',palette:{shirt:'#336699'}},{dimension:'3d',style:'cartoon',color:'red'},{dimension:'3d',style:'stick',color:'sparkly'},{dimension:'3d',style:'blob'}])assert.throws(()=>createCartoonCharacter(bad));
  const {figure}=createCartoonCharacter({dimension:'3d',style:'stick',color:'red'}),o=createObject(figure,1,300,300);
  for(const options of [{action:'walk',distance:160,duration:72},{action:'punch',duration:24,facing:1},{action:'kick',duration:30,facing:-1}]){
   const m=createHumanMotion(figure,o,{groundY:520,...options});for(let t=8;t<m.settings.duration;t++){const s=m.sample(t);assert.ok(s.pose.angles.every(Number.isFinite));for(const side of ['left','right'])if(s.contacts[side].planted)close(s.contacts[side].point.y,520,.05);}

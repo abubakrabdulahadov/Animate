@@ -34,8 +34,9 @@ Scene world coordinates use X right, Y down and Z toward the default camera.
 Actor `position` locates its pelvis reference; default soles lie 121 units below
 that reference. Box `position` is its center and `size` contains positive XYZ
 lengths. A floor centered at Y=131 with thickness 20 has its top at Y=121.
-Actor presets accept `name`, `palette`, `expression`, `position`, and `style:'stick'`
-with a `color` for [3D stickmen](SPATIAL-CHARACTERS.md#3d-stickmen). Box colors are
+Actor presets accept `name`, `position`, `style`, `color`, `palette` and `expression`.
+Actors are [3D stickmen](SPATIAL-CHARACTERS.md#3d-stickmen) with a `color` by default;
+`style:'cartoon'`, a `palette` or an `expression` makes a cartoon actor. Box colors are
 RGB byte arrays. `position` on `addSpatialScene` is the 2D composition center.
 An optional `camera` sets the initial view on creation.
 

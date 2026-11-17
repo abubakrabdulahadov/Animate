@@ -22,8 +22,13 @@ const specs=[
   ['leftFoot','leftShin',[15,103,0],[15,111,37]],['rightFoot','rightShin',[-15,103,0],[-15,111,37]],
 ];
 // Stickmen keep every joint except the shoulders: their arms leave the neck and hang slightly outward.
+// The forearm continues the upper arm's exact direction, so a straight arm is truly straight.
+const STICK_ELBOW=[19,-28,0],STICK_WRIST=(()=>{const d=[13,36],k=36/Math.hypot(...d);return [19+d[0]*k,-28+d[1]*k,0];})(),mirror=p=>[-p[0],p[1],p[2]];
+// Legs leave the bottom of the spine and spread to the usual ankles: an inverted "V", straight when extended.
+const STICK_HIP=[4,0,0],STICK_KNEE=(()=>{const d=[11,103],k=53/Math.hypot(...d);return [4+d[0]*k,d[1]*k,0];})();
 const stickSpecs=specs.map(([role,parent,origin,tip])=>{
-  const arm={leftUpperArm:[[6,-64,0],[19,-28,0]],leftForearm:[[19,-28,0],[25,8,0]],rightUpperArm:[[-6,-64,0],[-19,-28,0]],rightForearm:[[-19,-28,0],[-25,8,0]]}[role];
+  const arm={leftUpperArm:[[6,-64,0],STICK_ELBOW],leftForearm:[STICK_ELBOW,STICK_WRIST],rightUpperArm:[[-6,-64,0],mirror(STICK_ELBOW)],rightForearm:[mirror(STICK_ELBOW),mirror(STICK_WRIST)],
+    leftThigh:[STICK_HIP,STICK_KNEE],leftShin:[STICK_KNEE,[15,103,0]],rightThigh:[mirror(STICK_HIP),mirror(STICK_KNEE)],rightShin:[mirror(STICK_KNEE),[-15,103,0]]}[role];
   return arm?[role,parent,...arm]:[role,parent,origin,tip];
 });
 export function characterBones(figure){
@@ -35,24 +40,17 @@ export function characterBones(figure){
 export function characterRig(figure){const r=characterBones(figure),id=role=>r.get(role).segment.segment_id;return {spine:[id('spine0'),id('spine1')],head:id('head'),leftArm:[id('leftUpperArm'),id('leftForearm')],rightArm:[id('rightUpperArm'),id('rightForearm')],leftLeg:[id('leftThigh'),id('leftShin')],rightLeg:[id('rightThigh'),id('rightShin')],leftFoot:id('leftFoot'),rightFoot:id('rightFoot')};}
 
 /** Immutable mesh and ordinary spatial bones, using the existing depth renderer. */
-/** A 3D stickman: one solid color, a ball head and round sticks on the same native bones. */
-function buildStickMesh({surface,ellipsoid,colors}){
-  const ink=colors.stick,stick=5.6;
-  // A straight round stick between two points on one bone, capped by balls at the ends.
-  const bar=(role,a,b,r,label)=>{const d=b.map((n,i)=>n-a[i]),len=Math.hypot(...d),axis=d.map(n=>n/len),helper=Math.abs(axis[1])<.9?[0,1,0]:[1,0,0];
-    const cross=(u,v)=>[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]],n1=cross(axis,helper),k=Math.hypot(...n1),e1=n1.map(n=>n/k),e2=cross(axis,e1),center=a.map((n,i)=>(n+b[i])/2);
-    surface(role,center,ink,(u,v)=>{const phi=u*Math.PI,theta=v*Math.PI*2,end=u<.5?a:b,along=-Math.cos(phi)*r,ring=Math.sin(phi)*r;return end.map((n,i)=>n+axis[i]*along+(e1[i]*Math.cos(theta)+e2[i]*Math.sin(theta))*ring);},10,14,label);
-  };
+/** A 3D stickman: one solid color, a ball head and smooth limbs on the same native bones. */
+function buildStickMesh({ellipsoid,tube,colors}){
+  const ink=colors.stick,r=5.6,leg=6;
+  // Each chain is one continuous tube; joints blend between bones, so they bend like a real body.
+  tube([[[0,-3,0],'spine0',r*1.05],[[0,-27,0],'spine1',r],[[0,-69,0],'head',r*.92],[[0,-78,0],null,r*.92]],ink,'Body');
   ellipsoid('head',[0,-102,0],[29,29,29],ink,'Head',18,28);
-  bar('spine0',[0,0,0],[0,-27,0],stick,'Body');bar('spine1',[0,-27,0],[0,-72,0],stick,'Body');
-  // Every limb is a straight rigid stick on its own bone; a small pelvis "V" joins the legs.
-  ellipsoid('spine1',[0,-66,0],[6.4,6.4,6.4],ink,'Neck',8,12);
   for(const side of ['left','right']){const sx=side==='left'?1:-1;
-    bar('model',[0,-3,0],[sx*15,0,0],stick,'Hips');
-    bar(`${side}UpperArm`,[sx*6,-64,0],[sx*19,-28,0],stick,`${side} arm`);bar(`${side}Forearm`,[sx*19,-28,0],[sx*25,8,0],stick,`${side} arm`);
-    bar(`${side}Thigh`,[sx*15,0,0],[sx*15,53,0],stick*1.08,`${side} leg`);bar(`${side}Shin`,[sx*15,53,0],[sx*15,103,0],stick*1.08,`${side} leg`);
-    ellipsoid(`${side}Forearm`,[sx*25.8,13,0],[7.5,7.5,7.5],ink,`${side} hand`,10,14);
-    ellipsoid(`${side}Foot`,[sx*15,113.5,10],[7.5,7.5,16],ink,`${side} foot`,10,16);
+    tube([[[0,-66,0],'spine1',r],[[sx*6,-64,0],`${side}UpperArm`,r],[[sx*STICK_ELBOW[0],STICK_ELBOW[1],0],`${side}Forearm`,r*.95],[[sx*STICK_WRIST[0],STICK_WRIST[1],0],null,r*.9]],ink,`${side} arm`);
+    tube([[[0,-3,0],'model',leg],[[sx*STICK_HIP[0],STICK_HIP[1],0],`${side}Thigh`,leg],[[sx*STICK_KNEE[0],STICK_KNEE[1],0],`${side}Shin`,leg*.95],[[sx*15,103,0],`${side}Foot`,leg*.88],[[sx*15,112,16],null,leg*.88]],ink,`${side} leg`);
+    ellipsoid(`${side}Forearm`,[sx*32.2,9,0],[5.8,6.6,5.4],ink,`${side} hand`,10,14);
+    ellipsoid(`${side}Foot`,[sx*15,114.5,12],[6.6,6.5,13.5],ink,`${side} foot`,10,16);
   }
 }
 
@@ -96,7 +94,46 @@ export function buildSpatialCartoon({name,colors,expression,shading=true,style='
   const lathe=(role,ys,profile,color,label,rows=26,columns=28,power=2.6)=>{const center=[0,(ys[0]+ys[1])/2,0];
     surface(role,center,color,(u,v)=>{const [rx,rz,dz=0]=profile(u),theta=v*Math.PI*2,c=Math.cos(theta),s=Math.sin(theta),e=2/power;return[rx*Math.sign(c)*Math.abs(c)**e,ys[0]+(ys[1]-ys[0])*u,dz+rz*Math.sign(s)*Math.abs(s)**e];},rows,columns,label);
   };
-  if(style==='stick'){buildStickMesh({surface,ellipsoid,colors});figure._styk.spatialMesh=mesh;figure._styk.stickStyle=1;figure.segment_count=figure.segments.length;return {figure,rig:characterRig(figure)};}
+    /**
+   * One smooth tube through a chain of [point, bone of the following segment, radius] entries.
+   * Rings follow the path with parallel-transported frames; near an inner joint they blend the
+   * two bones' weights over about one and a half radii, giving a rounded bend without seams.
+   */
+  const tube=(chain,color,label)=>{
+    const start=mesh.indices.length/3,base=mesh.positions.length/3,columns=16,points=chain.map(c=>c[0]);
+    const sub=(a,b)=>a.map((n,i)=>n-b[i]),len=v=>Math.hypot(...v),unit=v=>{const n=len(v);return v.map(x=>x/n);};
+    const lengths=points.slice(1).map((p,i)=>len(sub(p,points[i])));
+    const blendAt=k=>Math.min(chain[k][2]*1.6,.45*lengths[k-1],.45*lengths[k]);
+    // Rings: {center, tangent, radius, weights:[[role,w]...]}.
+    const rings=[],weights=(k,s)=>{const role=chain[k][1],t=lengths[k],w=[[role,1]];
+      if(k>0&&chain[k-1][1]!==role&&s<blendAt(k)){const b=blendAt(k),x=(s+b)/(2*b),q=x*x*(3-2*x);return [[role,q],[chain[k-1][1],1-q]];}
+      const next=chain[k+1]?.[1];if(next&&next!==role&&t-s<blendAt(k+1)){const b=blendAt(k+1),x=(t-s+b)/(2*b),q=x*x*(3-2*x);return [[role,q],[next,1-q]];}
+      return w;};
+    const first=unit(sub(points[1],points[0])),last=unit(sub(points.at(-1),points.at(-2)));
+    for(let i=0;i<=5;i++){const phi=i/5*Math.PI/2;rings.push({center:points[0].map((n,k)=>n-first[k]*Math.cos(phi)*chain[0][2]),tangent:first,radius:Math.sin(phi)*chain[0][2]+1e-3,weights:[[chain[0][1],1]]});}
+    // Rest-pose corners are rounded with a short quadratic curve, so the path itself has no kinks.
+    const dirs=lengths.map((_,k)=>unit(sub(points[k+1],points[k]))),fillet=k=>k>0&&k<points.length-1?Math.min(chain[k][2]*1.6,.4*lengths[k-1],.4*lengths[k]):0;
+    const at=(k,s)=>{const c0=fillet(k),c1=fillet(k+1),d=dirs[k],L=lengths[k];
+      const curve=(P,din,dout,c,t)=>{const A=P.map((n,i)=>n-din[i]*c),B=P.map((n,i)=>n+dout[i]*c);return {center:A.map((a,i)=>(1-t)**2*a+2*t*(1-t)*P[i]+t*t*B[i]),tangent:unit(A.map((a,i)=>2*(1-t)*(P[i]-a)+2*t*(B[i]-P[i])))};};
+      if(c0&&s<c0)return curve(points[k],dirs[k-1],d,c0,(c0+s)/(2*c0));
+      if(c1&&L-s<c1)return curve(points[k+1],d,dirs[k+1],c1,(c1-(L-s))/(2*c1));
+      return {center:points[k].map((n,i)=>n+d[i]*s),tangent:d};};
+    for(let k=0;k<lengths.length;k++){const steps=Math.max(3,Math.ceil(lengths[k]/3.2));
+      for(let i=1;i<=steps;i++){const s=lengths[k]*i/steps,f=i/steps;rings.push({...at(k,s),radius:chain[k][2]+(chain[k+1][2]-chain[k][2])*f,weights:weights(k,s)});}}
+    const lastRole=chain.at(-2)[1];
+    for(let i=1;i<=5;i++){const phi=i/5*Math.PI/2;rings.push({center:points.at(-1).map((n,k)=>n+last[k]*Math.sin(phi)*chain.at(-1)[2]),tangent:last,radius:Math.cos(phi)*chain.at(-1)[2]+1e-3,weights:[[lastRole,1]]});}
+    let e1=Math.abs(first[2])<.9?[0,0,1]:[1,0,0];
+    for(const ring of rings){const t=ring.tangent,dot=e1.reduce((n,v,i)=>n+v*t[i],0);e1=unit(e1.map((v,i)=>v-dot*t[i]));const e2=[t[1]*e1[2]-t[2]*e1[1],t[2]*e1[0]-t[0]*e1[2],t[0]*e1[1]-t[1]*e1[0]];
+      for(let j=0;j<=columns;j++){const a=j/columns*Math.PI*2;mesh.positions.push(...ring.center.map((n,c)=>n+(e1[c]*Math.cos(a)+e2[c]*Math.sin(a))*ring.radius));
+        const ws=ring.weights.filter(([,w])=>w>1e-4);const sum=ws.reduce((n,[,w])=>n+w,0);
+        mesh.bones.push(...ws.map(([role])=>roles.get(role)),...Array(4-ws.length).fill(0));mesh.weights.push(...ws.map(([,w])=>w/sum),...Array(4-ws.length).fill(0));}}
+    const centroid=points.reduce((a,p)=>a.map((n,i)=>n+p[i]/points.length),[0,0,0]);
+    for(let i=0;i<rings.length-1;i++)for(let j=0;j<columns;j++){const q=base+i*(columns+1)+j,w=q+1,c=q+columns+1,e=c+1,A=p(q),B=p(w),C=p(c),D=p(e),quad=cross(D.map((n,k)=>n-A[k]),C.map((n,k)=>n-B[k]));
+      // Orient by the local ring center, not the whole chain's, so bent tubes face outward everywhere.
+      const local=rings[i].center;triangle(q,c,w,local,color,quad);triangle(w,c,e,local,color,quad);}
+    void centroid;mesh.groups.push({name:label,start,count:mesh.indices.length/3-start});
+  };
+  if(style==='stick'){buildStickMesh({ellipsoid,tube,colors});figure._styk.spatialMesh=mesh;figure._styk.stickStyle=1;figure.segment_count=figure.segments.length;return {figure,rig:characterRig(figure)};}
   const smooth=(keys,u)=>{let i=0;while(i<keys.length-2&&u>keys[i+1][0])i++;const [u0,...a]=keys[i],[u1,...b]=keys[i+1],t=Math.max(0,Math.min(1,(u-u0)/(u1-u0))),k=t*t*(3-2*t);return a.map((n,j)=>n+(b[j]-n)*k);};
   // Small details use fewer shading levels; they are too small to show more.
   const detail=rgb=>Object.assign([...rgb],{levels:2});
@@ -186,9 +223,10 @@ export function spatialHumanMotion(figure,object,options,fps,planarFactory){
   // Actions are planned in the body's own sagittal plane: forward is the heading, `facing` picks a profile.
   const base={...sourceView,yaw:moving?direction*Math.PI/2:acting&&options.facing!==undefined?options.facing*Math.PI/2:sourceView.yaw,orbitYaw:0,orbitPitch:0,...options.view},end={...base,...options.viewTo};
   const ids=role=>roles.get(role).segment.segment_id,restAngles=[-Math.PI/2,-Math.PI/2,-Math.PI/2,1.12,1.3,2.02,1.84,1.3,1.52,1.84,1.62,0,0];
+  // Pitch keeps a bone's sideways offset, so the planar proxy uses each bone's front-back (sagittal) length.
   const proxy={figure_type_id:figure.figure_type_id,name:figure.name,segments:[{...figure.segments[0],_stykRig:undefined},...anatomy.map((role,i)=>{
     const s=roles.get(role).segment,parent=[0,ids('spine0'),ids('spine1'),ids('spine1'),ids('leftUpperArm'),ids('spine1'),ids('rightUpperArm'),0,ids('leftThigh'),0,ids('rightThigh'),ids('leftShin'),ids('rightShin')][i];
-    return {...s,parent_id:parent,angle_rad:restAngles[i],length:Math.hypot(...s._stykRig.spatial.tip.map((n,i)=>n-s._stykRig.spatial.origin[i])),_stykRig:undefined,...(role==='head'?{segment_type:'circle',segment_kind:'circleFill',primitive_code:3,flags:3}:{})};
+    return {...s,parent_id:parent,angle_rad:restAngles[i],length:Math.hypot(...s._stykRig.spatial.tip.map((n,i)=>i?n-s._stykRig.spatial.origin[i]:0)),_stykRig:undefined,...(role==='head'?{segment_type:'circle',segment_kind:'circleFill',primitive_code:3,flags:3}:{})};
   })],polyfills:[],image_assets:[],text_assets:[],_styk:{footSole:18}};
   const proxyObject=createObject(proxy,object.unique_id,object.root_x,object.root_y,{scale:object.scale}),{view,viewTo,cloth,collisions=options.action!=='reach'&&!figure._styk?.stickStyle,...motionOptions}=options;
   if(typeof collisions!=='boolean')throw new TypeError('Character collisions must be true or false.');

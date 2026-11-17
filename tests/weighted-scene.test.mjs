@@ -22,7 +22,7 @@ test('weighted carrying flexes the knees, leans the torso and uses shorter compl
 });
 
 test('explicit torso contacts clear a reaching forearm without stretching native bones',()=>{
- const {figure}=createCartoonCharacter({dimension:'3d'}),o=createObject(figure,1,300,300),roles=characterBones(figure),m=createHumanMotion(figure,o,{action:'reach',duration:72,target:{x:325,y:285},collisions:true,view:{yaw:0}}),s=m.sample(40);
+ const {figure}=createCartoonCharacter({dimension:'3d',style:'cartoon'}),o=createObject(figure,1,300,300),roles=characterBones(figure),m=createHumanMotion(figure,o,{action:'reach',duration:72,target:{x:325,y:285},collisions:true,view:{yaw:0}}),s=m.sample(40);
  const g=buildGeometry({version:5,figure_types:[figure]},createFrame([s.pose])).objects.get(0),torso=g.segments[roles.get('spine0').index].spatialFrame;
  const p=role=>{const b=roles.get(role),f=g.segments[b.index].spatialFrame;close(f.stretch,1);return spatialPoint(f,b.segment._stykRig.spatial.tip);};
  assert.equal(torsoContact(p('rightUpperArm'),p('rightForearm'),torso).penetrating,false);assert.ok(s.collisions.length>0);
@@ -71,7 +71,7 @@ test('putting down releases before standing up and keeps the box fixed while the
 });
 
 test('lowering bends both knees forward and keeps the gaze toward the load',()=>{
- const {figure}=createCartoonCharacter({dimension:'3d'}),roles=characterBones(figure),m=createHumanMotion(figure,createObject(figure,1,0,0),{action:'putDown',duration:96,carry:{hand:'both',weight:.8,loadHeight:50},groundY:121,view:{yaw:0,headPitch:0}}),s=m.sample(57),g=buildGeometry({version:5,figure_types:[figure]},createFrame([s.pose])).objects.get(0);
+ const {figure}=createCartoonCharacter({dimension:'3d',style:'cartoon'}),roles=characterBones(figure),m=createHumanMotion(figure,createObject(figure,1,0,0),{action:'putDown',duration:96,carry:{hand:'both',weight:.8,loadHeight:50},groundY:121,view:{yaw:0,headPitch:0}}),s=m.sample(57),g=buildGeometry({version:5,figure_types:[figure]},createFrame([s.pose])).objects.get(0);
  for(const side of ['left','right']){const b=roles.get(`${side}Thigh`),p=spatialPoint(g.segments[b.index].spatialFrame,b.segment._stykRig.spatial.tip);assert.ok(p[2]>20,'Knees must bend toward the front of the body');}
  const head=g.segments[roles.get('head').index].spatialFrame,look=quatRotate(head.q,[0,0,1]);assert.ok(look[1]>0,'Gaze must follow the load downward');
 });

@@ -8,7 +8,7 @@ What's new in each version of StykAnimate.
 
 ### Added
 
-- Create 3D stickmen in bold solid colors such as black, white, red, yellow, green or gray, and use them in 3D scenes.
+- 3D characters are now stickmen in bold solid colors such as black, white, red, yellow, green or gray, with joints that bend smoothly like a real body. Cartoon characters remain available.
 - Create full-color 2D and 3D cartoon characters with expressive faces, styled hair, body and head turning, plus rounded panels, buttons, badges and speech bubbles.
 - Animate several 3D characters and solid scenery with a shared moving camera, directional light and soft ground shadows.
 - Carry weighted loads, set them on the floor, and stop generated 3D movement before obstacles or other characters.

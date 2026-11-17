@@ -1,13 +1,14 @@
-# Spatial cartoon characters
+# Spatial characters
 
-`addCartoonCharacter({dimension:'3d'})` creates an articulated, filled 3D character
-using the existing native spatial bones, indexed mesh, depth compositing and
-perspective. The planar preset remains available as `dimension:'2d'` (the default).
+`addCartoonCharacter({dimension:'3d'})` creates an articulated 3D character using
+the existing native spatial bones, indexed mesh, depth compositing and perspective.
+3D characters are [stickmen](#3d-stickmen) by default; `style:'cartoon'`, a `palette`
+or an `expression` selects the filled cartoon described below. The planar preset remains available as `dimension:'2d'` (the default).
 Saved older artwork is not automatically rebuilt or converted.
 
 ```js
 const {uid}=editor.addCartoonCharacter({
-  dimension:'3d', position:{x:400,y:330}, name:'Aziz',
+  dimension:'3d', style:'cartoon', position:{x:400,y:330}, name:'Aziz',
   palette:{shirt:'#659f99',pants:'#405a80'}
 });
 editor.select(uid);
@@ -38,18 +39,26 @@ surfaces.
 
 ## 3D stickmen
 
-`addCartoonCharacter({dimension:'3d', style:'stick', color:'red'})` builds a classic
-stick figure in 3D: a ball head, a straight round spine, arms that leave the neck,
-legs joined by a small pelvis "V", round hands and small feet, all in one solid
+`addCartoonCharacter({dimension:'3d', color:'red'})` builds a classic stick figure in
+3D (`style:'stick'` is the 3D default): a ball head, a round spine, arms that leave
+the neck, legs that spread from the base of the spine, small hands and feet, all in one solid
 color with soft baked shading and no face or clothing details. `color` accepts a
 six-digit hex or one of `black` (default), `white`, `red`, `yellow`, `green`, `gray`,
 `blue`, `orange`, `purple`, `pink`, `brown`, `cyan`. Named colors apply only to
 stickmen; cartoon palettes stay hex.
 
 Stickmen share the cartoon rig, controls, views, motion, actions and scenes. Their
-shoulder joints sit beside the neck and their arms splay slightly outward; hips,
-knees, feet and soles are unchanged, so grounding is identical. Every stick is
-rigid on its own bone and stays straight in any pose. Torso contact correction
+shoulder joints sit beside the neck and their arms splay slightly outward, with the
+forearm continuing the upper arm's exact direction. Their hip joints sit beside the
+spine and each straight leg runs to the usual ankle, an inverted "V"; ankles, feet
+and soles are unchanged, so grounding is identical.
+
+Each arm (neck → shoulder → elbow → wrist), leg (spine base → hip → knee → ankle → toe)
+and the spine into the neck is one continuous tube. Rest-pose corners are rounded
+with short curves, and within about 1.6 radii of every joint the tube blends the two
+bones' weights, so elbows, knees, shoulders, hips and ankles bend in one smooth curve
+without seams or ball caps. Bones keep their lengths; the blend only shapes the
+surface around the joint, and a sharply bent joint narrows slightly on its inside. Torso contact correction
 defaults off for stickmen because they have no wide torso; pass `collisions:true`
 to keep it. The style is 3D-only: 2D figures are stick figures already.
 

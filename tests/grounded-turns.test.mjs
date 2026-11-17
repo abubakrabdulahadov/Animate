@@ -19,7 +19,7 @@ test('walk decelerates to two grounded feet for fractional strides and both dire
 });
 
 test('curved native 3D walks keep stance ankles fixed in world space, with preserved limb lengths',()=>{
- const {figure}=createCartoonCharacter({dimension:'3d'}),roles=characterBones(figure);
+ const {figure}=createCartoonCharacter({dimension:'3d',style:'cartoon'}),roles=characterBones(figure);
  for(const scale of [.7,1.4])for(const distance of [150,-150]){
   const orbitYaw=.35,orbitPitch=.2;
   const m=createHumanMotion(figure,createObject(figure,1,300,300,{scale}),{duration:96,distance,groundY:530,view:{yaw:.2,orbitYaw,orbitPitch,perspective:.6},viewTo:{yaw:2.3,orbitYaw:.9,orbitPitch:.35}});let previous={},plants=0;
@@ -37,7 +37,7 @@ test('curved native 3D walks keep stance ankles fixed in world space, with prese
 });
 
 test('turning looks first, then twists the torso, then turns the pelvis, while feet step independently',()=>{
- const {figure}=createCartoonCharacter({dimension:'3d'}),m=createHumanMotion(figure,createObject(figure,1,0,0),{action:'turn',duration:120,groundY:121,view:{yaw:0},viewTo:{yaw:Math.PI}}),roles=characterBones(figure);
+ const {figure}=createCartoonCharacter({dimension:'3d',style:'cartoon'}),m=createHumanMotion(figure,createObject(figure,1,0,0),{action:'turn',duration:120,groundY:121,view:{yaw:0},viewTo:{yaw:Math.PI}}),roles=characterBones(figure);
  const early=m.sample(30),body=characterView(figure,early.pose),head=body.yaw+early.view.torsoYaw+body.headYaw;
  assert.ok(head>body.yaw+early.view.torsoYaw&&early.view.torsoYaw>0,'Gaze leads the shoulders and pelvis');
  assert.ok(!m.sample(25).contacts.left.planted&&m.sample(25).contacts.right.planted);
@@ -47,7 +47,7 @@ test('turning looks first, then twists the torso, then turns the pelvis, while f
 });
 
 test('turns take the short angular path across the heading wrap',()=>{
- const {figure}=createCartoonCharacter({dimension:'3d'}),m=createHumanMotion(figure,createObject(figure,1,0,0),{action:'turn',duration:60,view:{yaw:3.05},viewTo:{yaw:-3.05}});
+ const {figure}=createCartoonCharacter({dimension:'3d',style:'cartoon'}),m=createHumanMotion(figure,createObject(figure,1,0,0),{action:'turn',duration:60,view:{yaw:3.05},viewTo:{yaw:-3.05}});
  assert.ok(Math.abs(m.sample(59).view.yaw-3.05)<.2);
  assert.throws(()=>createHumanMotion(defaultFigure(),createObject(defaultFigure(),1,0,0),{action:'turn'}));
 });

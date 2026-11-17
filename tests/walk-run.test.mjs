@@ -14,7 +14,7 @@ import {AgentSession} from '../scripts/agent-session.mjs';
 const close=(a,b,t=1e-4)=>assert.ok(Math.abs(a-b)<t,`${a} != ${b}`);
 const angle=(a,b)=>Math.acos(Math.max(-1,Math.min(1,a.reduce((sum,n,i)=>sum+n*b[i],0)/(Math.hypot(...a)*Math.hypot(...b)))));
 const geometry=(f,p)=>buildGeometry({version:5,figure_types:[{...f,_styk:{...f._styk,spatialMesh:undefined}}]},createFrame([p])).objects.get(0);
-const figures=()=>[defaultFigure(),createCartoonCharacter().figure,createCartoonCharacter({dimension:'3d'}).figure];
+const figures=()=>[defaultFigure(),createCartoonCharacter().figure,createCartoonCharacter({dimension:'3d',style:'cartoon'}).figure];
 function boneVectors(f,g,chain){return chain.map(id=>{const bone=g.segments.find(s=>s.seg.segment_id===id);if(bone.spatialFrame){const a=spatialPoint(bone.spatialFrame,bone.seg._stykRig.spatial.origin),b=spatialPoint(bone.spatialFrame,bone.seg._stykRig.spatial.tip);return b.map((v,i)=>v-a[i]);}return[bone.end.x-bone.start.x,bone.end.y-bone.start.y,0];});}
 
 test('unloaded standing starts upright with near-straight knees instead of retaining a crouched source',()=>{
@@ -69,7 +69,7 @@ test('agents can run and shared scenes shorten running before an obstacle',async
 });
 
 test('curved spatial running holds world-space stance plants through a moving perspective camera',()=>{
- const {figure}=createCartoonCharacter({dimension:'3d'}),roles=characterBones(figure),m=createHumanMotion(figure,createObject(figure,1,300,300),{action:'run',duration:120,distance:300,groundY:550,view:{yaw:.3,orbitYaw:.2,orbitPitch:.15,perspective:.5},viewTo:{yaw:1.8,orbitYaw:.8,orbitPitch:.3}});const previous={};let checks=0;
+ const {figure}=createCartoonCharacter({dimension:'3d',style:'cartoon'}),roles=characterBones(figure),m=createHumanMotion(figure,createObject(figure,1,300,300),{action:'run',duration:120,distance:300,groundY:550,view:{yaw:.3,orbitYaw:.2,orbitPitch:.15,perspective:.5},viewTo:{yaw:1.8,orbitYaw:.8,orbitPitch:.3}});const previous={};let checks=0;
  for(let tick=12;tick<120;tick++){const s=m.sample(tick),g=geometry(figure,s.pose),inv=inverseQuaternion(quatMultiply(spatialQuaternion(0,0,-s.view.orbitPitch),spatialQuaternion(0,-s.view.orbitYaw,0)));
   for(const side of ['left','right']){const b=roles.get(`${side}Shin`),raw=spatialPoint(g.segments[b.index].spatialFrame,b.segment._stykRig.spatial.tip),p=quatRotate(inv,raw).map((v,k)=>v+s.worldRoot[k]),planted=s.contacts[side].planted;if(planted&&previous[side]?.planted){p.forEach((v,k)=>close(v,previous[side].point[k]));checks++;}previous[side]={point:p,planted};}
  }assert.ok(checks>20);

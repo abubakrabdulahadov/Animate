@@ -57,7 +57,10 @@ export function createCartoonCharacter(options={},{shading=true}={}) {
   const colors={skin:color(palette.skin??'#efc49c'),shirt:color(palette.shirt??'#68a6a0'),pants:color(palette.pants??'#405d81'),shoes:color(palette.shoes??'#26384e'),hair:color(palette.hair??'#554035'),iris:color(palette.iris??'#34505d')};
   const expression=options.expression??'happy';if(!['happy','neutral','sad'].includes(expression))throw new Error('Choose happy, neutral or sad.');
   const dimension=options.dimension??'2d';if(!['2d','3d'].includes(dimension))throw new Error('Choose 2d or 3d character artwork.');
-  const style=options.style??'cartoon';if(!['cartoon','stick'].includes(style))throw new Error('Choose cartoon or stick style.');
+  // 3D characters are stickmen unless a cartoon is asked for, or implied by a palette or expression.
+  const cartoonOnly=options.palette!==undefined||options.expression!==undefined;
+  const style=options.style??(dimension==='3d'&&!cartoonOnly?'stick':'cartoon');if(!['cartoon','stick'].includes(style))throw new Error('Choose cartoon or stick style.');
+  if(style==='stick'&&cartoonOnly)throw new Error("palette and expression belong to style:'cartoon'; stickmen take one color.");
   if(style==='stick'&&dimension!=='3d')throw new Error('The stick style is for 3D characters; 2D figures are stick figures already.');
   if(options.color!==undefined&&style!=='stick')throw new Error('color belongs to the stick style; use palette for cartoons.');
   if(style==='stick')return buildSpatialCartoon({name:name(options.name,'Stickman'),colors:{...colors,stick:color(typeof options.color==='string'&&Object.hasOwn(STICK_COLORS,options.color.toLowerCase())?STICK_COLORS[options.color.toLowerCase()]:options.color??STICK_COLORS.black)},expression,shading,style});
