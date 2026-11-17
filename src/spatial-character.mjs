@@ -44,13 +44,13 @@ export function characterRig(figure){const r=characterBones(figure),id=role=>r.g
 function buildStickMesh({ellipsoid,tube,colors}){
   const ink=colors.stick,r=5.6,leg=6;
   // Each chain is one continuous tube; joints blend between bones, so they bend like a real body.
+  // Legs end in a plain rounded tip that continues the shin (no shoe, no hook); in rest pose the tip is the sole at y=121.
   tube([[[0,-3,0],'spine0',r*1.05],[[0,-27,0],'spine1',r],[[0,-69,0],'head',r*.92],[[0,-78,0],null,r*.92]],ink,'Body');
   ellipsoid('head',[0,-102,0],[29,29,29],ink,'Head',18,28);
   for(const side of ['left','right']){const sx=side==='left'?1:-1;
     tube([[[0,-66,0],'spine1',r],[[sx*6,-64,0],`${side}UpperArm`,r],[[sx*STICK_ELBOW[0],STICK_ELBOW[1],0],`${side}Forearm`,r*.95],[[sx*STICK_WRIST[0],STICK_WRIST[1],0],null,r*.9]],ink,`${side} arm`);
-    tube([[[0,-3,0],'model',leg],[[sx*STICK_HIP[0],STICK_HIP[1],0],`${side}Thigh`,leg],[[sx*STICK_KNEE[0],STICK_KNEE[1],0],`${side}Shin`,leg*.95],[[sx*15,103,0],`${side}Foot`,leg*.88],[[sx*15,112,16],null,leg*.88]],ink,`${side} leg`);
+    tube([[[0,-3,0],'model',leg],[[sx*STICK_HIP[0],STICK_HIP[1],0],`${side}Thigh`,leg],[[sx*STICK_KNEE[0],STICK_KNEE[1],0],`${side}Shin`,leg*.95],[[sx*15,103,0],`${side}Shin`,leg*.9],[[sx*15,121-leg*.9,0],null,leg*.9]],ink,`${side} leg`);
     ellipsoid(`${side}Forearm`,[sx*32.2,9,0],[5.8,6.6,5.4],ink,`${side} hand`,10,14);
-    ellipsoid(`${side}Foot`,[sx*15,114.5,12],[6.6,6.5,13.5],ink,`${side} foot`,10,16);
   }
 }
 

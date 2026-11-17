@@ -41,7 +41,8 @@ surfaces.
 
 `addCartoonCharacter({dimension:'3d', color:'red'})` builds a classic stick figure in
 3D (`style:'stick'` is the 3D default): a ball head, a round spine, arms that leave
-the neck, legs that spread from the base of the spine, small hands and feet, all in one solid
+the neck, legs that spread from the base of the spine and end in plain rounded tips (no
+shoes), small hands, all in one solid
 color with soft baked shading and no face or clothing details. `color` accepts a
 six-digit hex or one of `black` (default), `white`, `red`, `yellow`, `green`, `gray`,
 `blue`, `orange`, `purple`, `pink`, `brown`, `cyan`. Named colors apply only to
@@ -50,13 +51,15 @@ stickmen; cartoon palettes stay hex.
 Stickmen share the cartoon rig, controls, views, motion, actions and scenes. Their
 shoulder joints sit beside the neck and their arms splay slightly outward, with the
 forearm continuing the upper arm's exact direction. Their hip joints sit beside the
-spine and each straight leg runs to the usual ankle, an inverted "V"; ankles, feet
-and soles are unchanged, so grounding is identical.
+spine and each straight leg runs to the usual ankle, an inverted "V". The leg tip
+continues the shin to the sole height, so a standing stickman touches the floor; ankles
+and sole contacts are unchanged, so grounding is identical. A tilted shin's tip sits
+up to about one unit above the floor.
 
-Each arm (neck → shoulder → elbow → wrist), leg (spine base → hip → knee → ankle → toe)
+Each arm (neck → shoulder → elbow → wrist), leg (spine base → hip → knee → tip)
 and the spine into the neck is one continuous tube. Rest-pose corners are rounded
 with short curves, and within about 1.6 radii of every joint the tube blends the two
-bones' weights, so elbows, knees, shoulders, hips and ankles bend in one smooth curve
+bones' weights, so elbows, knees, shoulders and hips bend in one smooth curve
 without seams or ball caps. Bones keep their lengths; the blend only shapes the
 surface around the joint, and a sharply bent joint narrows slightly on its inside. Torso contact correction
 defaults off for stickmen because they have no wide torso; pass `collisions:true`
