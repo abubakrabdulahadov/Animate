@@ -44,13 +44,13 @@ export function characterRig(figure){const r=characterBones(figure),id=role=>r.g
 function buildStickMesh({ellipsoid,tube,colors}){
   const ink=colors.stick,r=5.6,leg=6;
   // Each chain is one continuous tube; joints blend between bones, so they bend like a real body.
-  // Legs end in a plain rounded tip that continues the shin (no shoe, no hook); in rest pose the tip is the sole at y=121.
+  // Arms and legs end in plain rounded stick tips (no ball hands, no shoes). Leg tips continue the shin; in rest pose
+  // the tip is the sole at y=121.
   tube([[[0,-3,0],'spine0',r*1.05],[[0,-27,0],'spine1',r],[[0,-69,0],'head',r*.92],[[0,-78,0],null,r*.92]],ink,'Body');
   ellipsoid('head',[0,-102,0],[29,29,29],ink,'Head',18,28);
   for(const side of ['left','right']){const sx=side==='left'?1:-1;
     tube([[[0,-66,0],'spine1',r],[[sx*6,-64,0],`${side}UpperArm`,r],[[sx*STICK_ELBOW[0],STICK_ELBOW[1],0],`${side}Forearm`,r*.95],[[sx*STICK_WRIST[0],STICK_WRIST[1],0],null,r*.9]],ink,`${side} arm`);
     tube([[[0,-3,0],'model',leg],[[sx*STICK_HIP[0],STICK_HIP[1],0],`${side}Thigh`,leg],[[sx*STICK_KNEE[0],STICK_KNEE[1],0],`${side}Shin`,leg*.95],[[sx*15,103,0],`${side}Shin`,leg*.9],[[sx*15,121-leg*.9,0],null,leg*.9]],ink,`${side} leg`);
-    ellipsoid(`${side}Forearm`,[sx*32.2,9,0],[5.8,6.6,5.4],ink,`${side} hand`,10,14);
   }
 }
 
@@ -293,7 +293,9 @@ export function spatialHumanMotion(figure,object,options,fps,planarFactory){
       const x=Math.min(1,seconds/Math.max(.2,duration*.55)),amount=x*x*x*(x*(x*6-15)+10),weight=amount*sampled.weight;
       requestedReach={x:start.x+(options.target.x-start.x)*weight,y:start.y+(options.target.y-start.y)*weight-Math.sin(weight*Math.PI)*73*object.scale*.09};
       const capture=captureSpatialIK(figure,pose,g,chain,[]),target=unprojectSpatial(requestedReach,capture.spatialTarget.depth,pose,g.root);
-      const solved=solveObjectIK(figure,pose,g.root,ik,{[id]:{enabled:true,pinned:true,allowStretch:false,bendDirection:0,chainLength:2,followers:{},target:{...target,rotation:0},...capture}},{includePoints:false});
+      // A real elbow points down and slightly back, never up or outward.
+      const back=[-Math.sin(v.yaw)*.45,1,-Math.cos(v.yaw)*.45],n=Math.hypot(...back),pole=quatRotate(cameraQ,back.map(c=>c/n));
+      const solved=solveObjectIK(figure,pose,g.root,ik,{[id]:{enabled:true,pinned:true,allowStretch:false,bendDirection:0,chainLength:2,followers:{},target:{...target,rotation:0},...capture,spatialTarget:{...capture.spatialTarget,pole}}},{includePoints:false});
       if(solved){pose.angles=solved.angles;if(solved.lengths){pose.len_flag=1;pose.lengths=solved.lengths;}g=geometry();}
     }
     if(options.action==='putDown'&&sampled.load.lowering>0)for(const side of Object.keys(sampled.grips)){

@@ -41,8 +41,8 @@ surfaces.
 
 `addCartoonCharacter({dimension:'3d', color:'red'})` builds a classic stick figure in
 3D (`style:'stick'` is the 3D default): a ball head, a round spine, arms that leave
-the neck, legs that spread from the base of the spine and end in plain rounded tips (no
-shoes), small hands, all in one solid
+the neck, legs that spread from the base of the spine, arms and legs that end in plain
+rounded tips (no ball hands or shoes), all in one solid
 color with soft baked shading and no face or clothing details. `color` accepts a
 six-digit hex or one of `black` (default), `white`, `red`, `yellow`, `green`, `gray`,
 `blue`, `orange`, `purple`, `pink`, `brown`, `cyan`. Named colors apply only to
