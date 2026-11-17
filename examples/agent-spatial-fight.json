@@ -1,15 +1,15 @@
 {
   "version": 1,
-  "name": "3D fight under a moving camera",
+  "name": "3D stickman fight under a moving camera",
   "commands": [
     {"op": "project", "width": 960, "height": 540, "fps": 24},
     {"op": "call", "method": "addSpatialScene", "args": [{
       "position": {"x": 480, "y": 290},
       "actors": [
-        {"name": "Aziz", "position": [-60, 0, 0], "palette": {"shirt": "#4f9590"}},
-        {"name": "Nila", "position": [62, 0, 0], "palette": {"shirt": "#c1846b"}}
+        {"name": "Red", "position": [-60, 0, 0], "style": "stick", "color": "red"},
+        {"name": "Black", "position": [62, 0, 0], "style": "stick", "color": "black"}
       ],
-      "boxes": [{"name": "Floor", "position": [0, 131, 0], "size": [900, 20, 600], "color": [116, 143, 144]}],
+      "boxes": [{"name": "Floor", "position": [0, 131, 0], "size": [900, 20, 600], "color": [208, 212, 218]}],
       "lighting": {"shadows": true}
     }]},
     {"op": "call", "method": "applySpatialSceneMotion", "args": [{

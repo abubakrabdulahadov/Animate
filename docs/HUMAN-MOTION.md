@@ -229,7 +229,7 @@ the action's own plants, so planted soles stay on the floor while kicks and jump
 leave it. 3D strikes aim straight ahead; `target` is 2D-only. Shared 3D scenes accept
 the same actions per actor, plus `delay` to start an action later in the range
 (see [Shared 3D scenes](SPATIAL-SCENES.md)); [agent-spatial-fight.json](../examples/agent-spatial-fight.json)
-syncs a punch, kick and their hit reactions under a moving scene camera.
+syncs a red and a black 3D stickman's punch, kick and hit reactions under a moving scene camera.
 
 ## Running
 

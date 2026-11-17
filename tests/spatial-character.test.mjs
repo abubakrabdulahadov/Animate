@@ -115,3 +115,23 @@ test('invalid views, unsupported planar cloth, stale edits and cancelled worker 
  const controller=new AbortController(),pending=session.invoke('editor_applyHumanMotion',{args:[{duration:1200,distance:500}]},controller.signal);controller.abort();await assert.rejects(pending,{name:'AbortError'});assert.deepEqual(e.serialize(),before);
  const stale=e.applyHumanMotion({duration:1200,distance:500});e.setFPS(30);await assert.rejects(stale,{name:'AbortError'});assert.equal(e.report.fps,30);assert.equal(e.selectedUid,added.value.uid);
 });
+
+test('3D stickmen use one solid color, straight rigid sticks and the shared motion rig',async()=>{
+ const {STICK_COLORS}=await import('../src/filled-art.mjs');
+ for(const color of ['black','white','red','yellow','green','gray','#123456']){
+  const {figure,rig}=createCartoonCharacter({dimension:'3d',style:'stick',color}),mesh=figure._styk.spatialMesh,base=color.startsWith('#')?color:STICK_COLORS[color];
+  assert.equal(figure._styk.stickStyle,1);assert.deepEqual(humanRig(figure),rig);
+  assert.ok(mesh.colors.length<=14,'One color with its shading levels');
+  const rgb=[1,3,5].map(i=>parseInt(base.slice(i,i+2),16));assert.ok(mesh.colors.every(c=>c.every((v,i)=>v<=rgb[i]+16&&v>=rgb[i]*.45)),'Every palette entry is a shade of the chosen color');
+  for(let v=0;v<mesh.weights.length;v+=4)assert.deepEqual(mesh.weights.slice(v,v+4),[1,0,0,0],'Rigid sticks stay straight');
+  let bottom=-Infinity;for(let i=1;i<mesh.positions.length;i+=3)bottom=Math.max(bottom,mesh.positions[i]);close(bottom,121);
+  assert.ok(!mesh.groups.some(g=>['Eye white','Hair','Mouth'].includes(g.name)),'No face details');
+ }
+ for(const bad of [{style:'stick'},{dimension:'3d',color:'red'},{dimension:'3d',style:'stick',color:'sparkly'},{dimension:'3d',style:'blob'}])assert.throws(()=>createCartoonCharacter(bad));
+ const {figure}=createCartoonCharacter({dimension:'3d',style:'stick',color:'red'}),o=createObject(figure,1,300,300);
+ for(const options of [{action:'walk',distance:160,duration:72},{action:'punch',duration:24,facing:1},{action:'kick',duration:30,facing:-1}]){
+  const m=createHumanMotion(figure,o,{groundY:520,...options});for(let t=8;t<m.settings.duration;t++){const s=m.sample(t);assert.ok(s.pose.angles.every(Number.isFinite));for(const side of ['left','right'])if(s.contacts[side].planted)close(s.contacts[side].point.y,520,.05);}
+ }
+ const e=new Editor({demo:false});e.addSpatialScene({actors:[{name:'R',style:'stick',color:'red',position:[-60,0,0]},{name:'B',style:'stick',color:'black',position:[62,0,0]}],boxes:[{name:'Floor',position:[0,131,0],size:[900,20,600],color:[200,200,200]}]});
+ const result=await e.applySpatialSceneMotion({duration:30,actors:[{action:'punch',facing:1},{action:'hit',facing:-1,delay:13}]});assert.equal(result.events.length,2);
+});

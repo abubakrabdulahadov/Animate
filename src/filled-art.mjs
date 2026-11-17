@@ -1,6 +1,8 @@
 import {defaultFigure} from './demo.mjs';
 import {buildSpatialCartoon} from './spatial-character.mjs';
 
+// Named stick colors for quick, bold figures; any six-digit hex also works.
+export const STICK_COLORS=Object.freeze({black:'#111111',white:'#f4f4f4',red:'#e02424',yellow:'#f5c518',green:'#22a447',gray:'#8a8f98',blue:'#2563eb',orange:'#f07c16',purple:'#8b3fd9',pink:'#ec5f9c',brown:'#7b4a2a',cyan:'#14b8c8'});
 const color=value=>{if(typeof value==='string'&&/^#[a-f\d]{6}$/i.test(value))value=[1,3,5].map(i=>parseInt(value.slice(i,i+2),16));if(!Array.isArray(value)||value.length!==3||value.some(v=>!Number.isInteger(v)||v<0||v>255))throw new Error('Choose a six-digit hex or RGB fill color.');return [...value];};
 const finite=(n,key,min,max)=>{if(!Number.isFinite(n)||n<min||n>max)throw new RangeError(`${key} must be between ${min} and ${max}.`);return n;};
 const keys=(o,allowed)=>{if(!o||typeof o!=='object'||Array.isArray(o))throw new TypeError('Filled artwork options must be an object.');for(const k of Object.keys(o))if(!allowed.includes(k))throw new Error(`Unknown filled artwork option: ${k}`);};
@@ -50,11 +52,15 @@ export function createFilledShape(options={}) {
 
 /** A complete two-spine planar humanoid. All visible artwork is native fill. */
 export function createCartoonCharacter(options={},{shading=true}={}) {
-  keys(options,['name','palette','expression','dimension']);
+  keys(options,['name','palette','expression','dimension','style','color']);
   const palette=options.palette??{};keys(palette,['skin','shirt','pants','shoes','hair','iris']);
   const colors={skin:color(palette.skin??'#efc49c'),shirt:color(palette.shirt??'#68a6a0'),pants:color(palette.pants??'#405d81'),shoes:color(palette.shoes??'#26384e'),hair:color(palette.hair??'#554035'),iris:color(palette.iris??'#34505d')};
   const expression=options.expression??'happy';if(!['happy','neutral','sad'].includes(expression))throw new Error('Choose happy, neutral or sad.');
   const dimension=options.dimension??'2d';if(!['2d','3d'].includes(dimension))throw new Error('Choose 2d or 3d character artwork.');
+  const style=options.style??'cartoon';if(!['cartoon','stick'].includes(style))throw new Error('Choose cartoon or stick style.');
+  if(style==='stick'&&dimension!=='3d')throw new Error('The stick style is for 3D characters; 2D figures are stick figures already.');
+  if(options.color!==undefined&&style!=='stick')throw new Error('color belongs to the stick style; use palette for cartoons.');
+  if(style==='stick')return buildSpatialCartoon({name:name(options.name,'Stickman'),colors:{...colors,stick:color(typeof options.color==='string'&&Object.hasOwn(STICK_COLORS,options.color.toLowerCase())?STICK_COLORS[options.color.toLowerCase()]:options.color??STICK_COLORS.black)},expression,shading,style});
   if(dimension==='3d')return buildSpatialCartoon({name:name(options.name,'Spatial cartoon character'),colors,expression,shading});
   const figure=defaultFigure(1);figure.name=name(options.name,'Cartoon character');figure.polyfills=[];
   const specs=[

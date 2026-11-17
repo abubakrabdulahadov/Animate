@@ -21,6 +21,11 @@ const specs=[
   ['rightThigh','model',[-15,0,0],[-15,53,0]],['rightShin','rightThigh',[-15,53,0],[-15,103,0]],
   ['leftFoot','leftShin',[15,103,0],[15,111,37]],['rightFoot','rightShin',[-15,103,0],[-15,111,37]],
 ];
+// Stickmen keep every joint except the shoulders: their arms leave the neck and hang slightly outward.
+const stickSpecs=specs.map(([role,parent,origin,tip])=>{
+  const arm={leftUpperArm:[[6,-64,0],[19,-28,0]],leftForearm:[[19,-28,0],[25,8,0]],rightUpperArm:[[-6,-64,0],[-19,-28,0]],rightForearm:[[-19,-28,0],[-25,8,0]]}[role];
+  return arm?[role,parent,...arm]:[role,parent,origin,tip];
+});
 export function characterBones(figure){
   if(!isSpatialCharacter(figure))throw new Error('Select a spatial cartoon character.');
   const roles=new Map();for(const [index,s]of figure.segments.entries())if(s._stykCharacterRole){if(roles.has(s._stykCharacterRole))throw new Error('Ambiguous character anatomy.');roles.set(s._stykCharacterRole,{segment:s,index});}
@@ -30,12 +35,34 @@ export function characterBones(figure){
 export function characterRig(figure){const r=characterBones(figure),id=role=>r.get(role).segment.segment_id;return {spine:[id('spine0'),id('spine1')],head:id('head'),leftArm:[id('leftUpperArm'),id('leftForearm')],rightArm:[id('rightUpperArm'),id('rightForearm')],leftLeg:[id('leftThigh'),id('leftShin')],rightLeg:[id('rightThigh'),id('rightShin')],leftFoot:id('leftFoot'),rightFoot:id('rightFoot')};}
 
 /** Immutable mesh and ordinary spatial bones, using the existing depth renderer. */
+/** A 3D stickman: one solid color, a ball head and round sticks on the same native bones. */
+function buildStickMesh({surface,ellipsoid,colors}){
+  const ink=colors.stick,stick=5.6;
+  // A straight round stick between two points on one bone, capped by balls at the ends.
+  const bar=(role,a,b,r,label)=>{const d=b.map((n,i)=>n-a[i]),len=Math.hypot(...d),axis=d.map(n=>n/len),helper=Math.abs(axis[1])<.9?[0,1,0]:[1,0,0];
+    const cross=(u,v)=>[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]],n1=cross(axis,helper),k=Math.hypot(...n1),e1=n1.map(n=>n/k),e2=cross(axis,e1),center=a.map((n,i)=>(n+b[i])/2);
+    surface(role,center,ink,(u,v)=>{const phi=u*Math.PI,theta=v*Math.PI*2,end=u<.5?a:b,along=-Math.cos(phi)*r,ring=Math.sin(phi)*r;return end.map((n,i)=>n+axis[i]*along+(e1[i]*Math.cos(theta)+e2[i]*Math.sin(theta))*ring);},10,14,label);
+  };
+  ellipsoid('head',[0,-102,0],[29,29,29],ink,'Head',18,28);
+  bar('spine0',[0,0,0],[0,-27,0],stick,'Body');bar('spine1',[0,-27,0],[0,-72,0],stick,'Body');
+  // Every limb is a straight rigid stick on its own bone; a small pelvis "V" joins the legs.
+  ellipsoid('spine1',[0,-66,0],[6.4,6.4,6.4],ink,'Neck',8,12);
+  for(const side of ['left','right']){const sx=side==='left'?1:-1;
+    bar('model',[0,-3,0],[sx*15,0,0],stick,'Hips');
+    bar(`${side}UpperArm`,[sx*6,-64,0],[sx*19,-28,0],stick,`${side} arm`);bar(`${side}Forearm`,[sx*19,-28,0],[sx*25,8,0],stick,`${side} arm`);
+    bar(`${side}Thigh`,[sx*15,0,0],[sx*15,53,0],stick*1.08,`${side} leg`);bar(`${side}Shin`,[sx*15,53,0],[sx*15,103,0],stick*1.08,`${side} leg`);
+    ellipsoid(`${side}Forearm`,[sx*25.8,13,0],[7.5,7.5,7.5],ink,`${side} hand`,10,14);
+    ellipsoid(`${side}Foot`,[sx*15,113.5,10],[7.5,7.5,16],ink,`${side} foot`,10,16);
+  }
+}
+
 /** `shading:false` keeps flat base colors for scenes whose own light shades the mesh. */
-export function buildSpatialCartoon({name,colors,expression,shading=true}) {
+export function buildSpatialCartoon({name,colors,expression,shading=true,style='cartoon'}) {
   const figure={figure_type_id:1,name,segments:[],polyfills:[],image_assets:[],text_assets:[],_styk:{spatialCartoon:1,footSole:18,colorMode:'segments'}},roles=new Map();
   const add=(parent,length,angle,name,extra={})=>{const id=figure.segments.length+1;figure.segments.push({segment_id:id,parent_id:parent,length,angle_rad:angle,thickness:0,bend_rad:0,primitive_code:0,aux_code:0,flags:0,segment_type:'line',segment_kind:'line',visible:false,color_rgb:[0,0,0],transparency:0,z_order:0,name,...extra});return id;};
   add(0,0,0,'Figure rotation');
-  for(const [role,parent,origin,tip]of [['model',null,[0,0,0],[0,-1,0]],...specs]){
+  const rigSpecs=style==='stick'?stickSpecs:specs;
+  for(const [role,parent,origin,tip]of [['model',null,[0,0,0],[0,-1,0]],...rigSpecs]){
     const turn=add(0,0,0,`${role} turn`),pitch=add(0,0,0,`${role} tilt`),v=tip.map((n,i)=>n-origin[i]);
     const id=add(roles.get(parent)??0,Math.hypot(...v),Math.atan2(v[1],v[0]),role,{_stykCharacterRole:role,_stykRig:{spatial:{parent:roles.get(parent)??0,origin:[...origin],tip:[...tip],turn,pitch}}});roles.set(role,id);
   }
@@ -69,6 +96,7 @@ export function buildSpatialCartoon({name,colors,expression,shading=true}) {
   const lathe=(role,ys,profile,color,label,rows=26,columns=28,power=2.6)=>{const center=[0,(ys[0]+ys[1])/2,0];
     surface(role,center,color,(u,v)=>{const [rx,rz,dz=0]=profile(u),theta=v*Math.PI*2,c=Math.cos(theta),s=Math.sin(theta),e=2/power;return[rx*Math.sign(c)*Math.abs(c)**e,ys[0]+(ys[1]-ys[0])*u,dz+rz*Math.sign(s)*Math.abs(s)**e];},rows,columns,label);
   };
+  if(style==='stick'){buildStickMesh({surface,ellipsoid,colors});figure._styk.spatialMesh=mesh;figure._styk.stickStyle=1;figure.segment_count=figure.segments.length;return {figure,rig:characterRig(figure)};}
   const smooth=(keys,u)=>{let i=0;while(i<keys.length-2&&u>keys[i+1][0])i++;const [u0,...a]=keys[i],[u1,...b]=keys[i+1],t=Math.max(0,Math.min(1,(u-u0)/(u1-u0))),k=t*t*(3-2*t);return a.map((n,j)=>n+(b[j]-n)*k);};
   // Small details use fewer shading levels; they are too small to show more.
   const detail=rgb=>Object.assign([...rgb],{levels:2});
@@ -162,7 +190,7 @@ export function spatialHumanMotion(figure,object,options,fps,planarFactory){
     const s=roles.get(role).segment,parent=[0,ids('spine0'),ids('spine1'),ids('spine1'),ids('leftUpperArm'),ids('spine1'),ids('rightUpperArm'),0,ids('leftThigh'),0,ids('rightThigh'),ids('leftShin'),ids('rightShin')][i];
     return {...s,parent_id:parent,angle_rad:restAngles[i],length:Math.hypot(...s._stykRig.spatial.tip.map((n,i)=>n-s._stykRig.spatial.origin[i])),_stykRig:undefined,...(role==='head'?{segment_type:'circle',segment_kind:'circleFill',primitive_code:3,flags:3}:{})};
   })],polyfills:[],image_assets:[],text_assets:[],_styk:{footSole:18}};
-  const proxyObject=createObject(proxy,object.unique_id,object.root_x,object.root_y,{scale:object.scale}),{view,viewTo,cloth,collisions=options.action!=='reach',...motionOptions}=options;
+  const proxyObject=createObject(proxy,object.unique_id,object.root_x,object.root_y,{scale:object.scale}),{view,viewTo,cloth,collisions=options.action!=='reach'&&!figure._styk?.stickStyle,...motionOptions}=options;
   if(typeof collisions!=='boolean')throw new TypeError('Character collisions must be true or false.');
   const planar=planarFactory(proxy,proxyObject,{...motionOptions,...(turning?{action:'idle'}:{}),...(acting?{facing:1}:{}),rig,cloth:false},fps);
   // Action travel follows the body heading at that moment; walking uses its integrated arc-length path.

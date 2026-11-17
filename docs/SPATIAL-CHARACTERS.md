@@ -36,6 +36,23 @@ let the scene light shade them, avoiding double shading. The scene light still
 quantizes to 16 levels per triangle, so a faint grid can show on large curved
 surfaces.
 
+## 3D stickmen
+
+`addCartoonCharacter({dimension:'3d', style:'stick', color:'red'})` builds a classic
+stick figure in 3D: a ball head, a straight round spine, arms that leave the neck,
+legs joined by a small pelvis "V", round hands and small feet, all in one solid
+color with soft baked shading and no face or clothing details. `color` accepts a
+six-digit hex or one of `black` (default), `white`, `red`, `yellow`, `green`, `gray`,
+`blue`, `orange`, `purple`, `pink`, `brown`, `cyan`. Named colors apply only to
+stickmen; cartoon palettes stay hex.
+
+Stickmen share the cartoon rig, controls, views, motion, actions and scenes. Their
+shoulder joints sit beside the neck and their arms splay slightly outward; hips,
+knees, feet and soles are unchanged, so grounding is identical. Every stick is
+rigid on its own bone and stays straight in any pose. Torso contact correction
+defaults off for stickmen because they have no wide torso; pass `collisions:true`
+to keep it. The style is 3D-only: 2D figures are stick figures already.
+
 ## Pose and view controls
 
 `getCharacterView()` reports the native view channels. `setCharacterView(patch)`
