@@ -18,15 +18,23 @@ await editor.applyHumanMotion({
 });
 ```
 
-The model has separate torso, head, arms, legs, hands and shoes. Eyes, nose,
-mouth and hair occupy actual depth on the head. A front pocket and back seam
+The model has a tapered shirt with collar and pocket, a belt, rounded shoulders,
+sleeves, tapered limbs, mitten hands with thumbs, and shoes with toe caps and soles.
+The large head carries eyes with iris, pupil and highlight, brows, cheeks, a nose,
+ears and a mouth curved by `expression`; they occupy actual depth on the head. The
+hair cap keeps a forehead hairline in front, clears the ears and reaches the nape. A front pocket and back seam
 distinguish the torso's two sides. Depth testing hides facial details when the
 head faces away and orders near/far limbs; painter-order tricks or a mirrored
 face image are not used. Head turn/tilt are relative to the body. The geometry
-uses about 6,500 vertices and 10,200 triangles, but only 45 native controls, so
+uses about 9,000 vertices and 14,000 triangles, but only 45 native controls, so
 mesh density does not multiply pose channel size. Palette shading is baked into
-the mesh; shared scenes can add optional directional light and ground shadows
-through [scene lighting](SPATIAL-SCENES.md).
+the mesh as a soft wrapped key light with cooler shadows; both triangles of each
+surface quad share one level, and small details use fewer levels, so a character
+needs at most 128 palette colors and eight fit a scene. Shared scenes created with
+[scene lighting](SPATIAL-SCENES.md) build their actors with flat base colors and
+let the scene light shade them, avoiding double shading. The scene light still
+quantizes to 16 levels per triangle, so a faint grid can show on large curved
+surfaces.
 
 ## Pose and view controls
 

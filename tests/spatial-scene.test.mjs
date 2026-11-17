@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {Editor} from '../src/editor.mjs';
 import {createSpatialScene,createSpatialSceneMotion} from '../src/spatial-scene.mjs';
 import {createObject,createFrame,emptyDocument} from '../src/demo.mjs';
+import {createCartoonCharacter} from '../src/filled-art.mjs';
 import {buildGeometry} from '../src/pivot/geometry.mjs';
 import {validateScene} from '../src/pivot/model.mjs';
 import {buildContainerV2,decodeDocument} from '../src/native-container.mjs';
@@ -17,7 +18,7 @@ const motion={duration:48,actors:[{action:'walk',distance:100,view:{yaw:1.2},vie
 test('shared native scene mesh contains separate editable actor bones and solid scenery',()=>{
  const f=createSpatialScene(options),o=createObject(f,1,400,300),m=createSpatialSceneMotion(f,o,motion,24),s=m.sample(25),report={...emptyDocument(),figure_types:[f],keyframes:[createFrame([s.pose])]};validateScene(report);
  const g=buildGeometry(report,report.keyframes[0]).objects.get(0),mesh=g.spatialMesh;
- assert.equal(mesh.vertexCount,6514*2+16);assert.equal(mesh.plan.triangles,10244*2+24);assert.ok(mesh.count>5000);assert.ok(mesh.zMax>mesh.zMin);
+ const actor=createCartoonCharacter({dimension:'3d'}).figure._styk.spatialMesh;assert.equal(mesh.vertexCount,actor.positions.length/3*2+16);assert.equal(mesh.plan.triangles,actor.indices.length/3*2+24);assert.ok(mesh.count>5000);assert.ok(mesh.zMax>mesh.zMin);
  const groups=f._styk.spatialMesh.groups;assert.deepEqual(groups.map(g=>g.name),['Aziz','Nila','Floor','Pillar']);assert.ok(f.segments.length<150);
  const before=structuredClone(s);m.sample(0);assert.deepEqual(m.sample(25),before);
 });

@@ -8,7 +8,7 @@ What's new in each version of StykAnimate.
 
 ### Added
 
-- Create full-color 2D and 3D cartoon characters with body and head turning, plus rounded panels, buttons, badges and speech bubbles.
+- Create full-color 2D and 3D cartoon characters with expressive faces, styled hair, body and head turning, plus rounded panels, buttons, badges and speech bubbles.
 - Animate several 3D characters and solid scenery with a shared moving camera, directional light and soft ground shadows.
 - Carry weighted loads, set them on the floor, and stop generated 3D movement before obstacles or other characters.
 - Create finely jointed scarves, capes and skirts with adjustable density, editable draping motion and optional body contact.

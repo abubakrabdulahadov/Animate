@@ -41,7 +41,7 @@ export function createSpatialScene(options={}){
  const color=rgb=>{const key=rgb.join();if(!palette.has(key)){if(mesh.colors.length>=1024)throw new RangeError('Scene exceeds the native color palette limit.');palette.set(key,mesh.colors.length);mesh.colors.push([...rgb]);}return palette.get(key);};
  for(const [i,actor]of actors.entries()){
   record(actor,['name','palette','expression','position'],'scene actor');const position=vector(actor.position??[0,0,0],'actor.position');
-  const {figure:source}=createCartoonCharacter({dimension:'3d',name:actor.name??`Actor ${i+1}`,palette:actor.palette,expression:actor.expression});
+  const {figure:source}=createCartoonCharacter({dimension:'3d',name:actor.name??`Actor ${i+1}`,palette:actor.palette,expression:actor.expression},{shading:!lighting});
   const translation=slides(`Actor ${i+1} position`,cameraPosition[2]),ids=new Map(source.segments.map((s,index)=>[s.segment_id,figure.segments.length+index+1]));
   for(const original of source.segments){const s=structuredClone(original);remapRigReferences(s,ids);s.segment_id=ids.get(original.segment_id);s.parent_id=ids.get(original.parent_id)??0;
    if(s._stykCharacterRole==='model'){s._stykRig.spatial.parent=translation[2];s.parent_id=translation[2];}

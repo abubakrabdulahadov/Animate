@@ -34,6 +34,17 @@ test('spatial cartoon uses a compact existing native mesh rig with physical feet
  assert.ok(geometry(figure,object).spatialMesh.triangles.length>0);
 });
 
+test('3D characters show an uncovered face, share one shading level per quad and fit eight-actor scenes',()=>{
+ const mesh=createCartoonCharacter({dimension:'3d'}).figure._styk.spatialMesh,group=name=>mesh.groups.filter(g=>g.name===name);
+ for(const name of ['Head','Hair','Eye white','Pupil','Mouth','Cheek','Belt','left hand','left thumb','left sole'])assert.ok(group(name).length,name);
+ const head=group('Head')[0];let quads=0;for(let t=head.start;t<head.start+head.count-1;t++){const a=new Set(mesh.indices.slice(t*3,t*3+3)),shared=mesh.indices.slice(t*3+3,t*3+6).filter(i=>a.has(i));if(shared.length===2&&Math.abs(shared[0]-shared[1])===28){quads++;assert.equal(mesh.materials[t],mesh.materials[t+1],'Quad halves share a shade');}}assert.ok(quads>300);
+ const hair=group('Hair')[0],face=[];for(let t=hair.start;t<hair.start+hair.count;t++)for(let k=0;k<3;k++){const i=mesh.indices[t*3+k];face.push(mesh.positions.slice(i*3,i*3+3));}
+ assert.ok(face.every(([x,y,z])=>!(z>18&&Math.abs(x)<20&&y>-120&&y<-84)),'Hair must leave the eyes, nose and mouth visible');
+ let bottom=-Infinity;for(let i=1;i<mesh.positions.length;i+=3)bottom=Math.max(bottom,mesh.positions[i]);close(bottom,121);
+ assert.ok(mesh.colors.length<=128,'Eight scene actors must fit the 1024-color native palette');
+ const flat=createCartoonCharacter({dimension:'3d'},{shading:false}).figure._styk.spatialMesh;assert.ok(flat.colors.length<40);assert.equal(flat.indices.length,mesh.indices.length);
+});
+
 test('new characters own their rest frames and toe controls lie at the shoe tip',()=>{
  const a=createCartoonCharacter({dimension:'3d'}),b=createCartoonCharacter({dimension:'3d'}),first=characterBones(a.figure),second=characterBones(b.figure);
  first.get('spine0').segment._stykRig.spatial.origin[0]=55;assert.equal(second.get('spine0').segment._stykRig.spatial.origin[0],0);

@@ -49,13 +49,13 @@ export function createFilledShape(options={}) {
 }
 
 /** A complete two-spine planar humanoid. All visible artwork is native fill. */
-export function createCartoonCharacter(options={}) {
+export function createCartoonCharacter(options={},{shading=true}={}) {
   keys(options,['name','palette','expression','dimension']);
   const palette=options.palette??{};keys(palette,['skin','shirt','pants','shoes','hair','iris']);
   const colors={skin:color(palette.skin??'#efc49c'),shirt:color(palette.shirt??'#68a6a0'),pants:color(palette.pants??'#405d81'),shoes:color(palette.shoes??'#26384e'),hair:color(palette.hair??'#554035'),iris:color(palette.iris??'#34505d')};
   const expression=options.expression??'happy';if(!['happy','neutral','sad'].includes(expression))throw new Error('Choose happy, neutral or sad.');
   const dimension=options.dimension??'2d';if(!['2d','3d'].includes(dimension))throw new Error('Choose 2d or 3d character artwork.');
-  if(dimension==='3d')return buildSpatialCartoon({name:name(options.name,'Spatial cartoon character'),colors,expression});
+  if(dimension==='3d')return buildSpatialCartoon({name:name(options.name,'Spatial cartoon character'),colors,expression,shading});
   const figure=defaultFigure(1);figure.name=name(options.name,'Cartoon character');figure.polyfills=[];
   const specs=[
     [0,27,-Math.PI/2,'Lower spine'],[1,42,-Math.PI/2,'Chest'],[2,50,-Math.PI/2,'Head'],

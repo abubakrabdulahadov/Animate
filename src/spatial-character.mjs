@@ -30,7 +30,8 @@ export function characterBones(figure){
 export function characterRig(figure){const r=characterBones(figure),id=role=>r.get(role).segment.segment_id;return {spine:[id('spine0'),id('spine1')],head:id('head'),leftArm:[id('leftUpperArm'),id('leftForearm')],rightArm:[id('rightUpperArm'),id('rightForearm')],leftLeg:[id('leftThigh'),id('leftShin')],rightLeg:[id('rightThigh'),id('rightShin')],leftFoot:id('leftFoot'),rightFoot:id('rightFoot')};}
 
 /** Immutable mesh and ordinary spatial bones, using the existing depth renderer. */
-export function buildSpatialCartoon({name,colors,expression}) {
+/** `shading:false` keeps flat base colors for scenes whose own light shades the mesh. */
+export function buildSpatialCartoon({name,colors,expression,shading=true}) {
   const figure={figure_type_id:1,name,segments:[],polyfills:[],image_assets:[],text_assets:[],_styk:{spatialCartoon:1,footSole:18,colorMode:'segments'}},roles=new Map();
   const add=(parent,length,angle,name,extra={})=>{const id=figure.segments.length+1;figure.segments.push({segment_id:id,parent_id:parent,length,angle_rad:angle,thickness:0,bend_rad:0,primitive_code:0,aux_code:0,flags:0,segment_type:'line',segment_kind:'line',visible:false,color_rgb:[0,0,0],transparency:0,z_order:0,name,...extra});return id;};
   add(0,0,0,'Figure rotation');
@@ -40,41 +41,86 @@ export function buildSpatialCartoon({name,colors,expression}) {
   }
   const x=add(0,30,0,'Surface X'),y=add(0,30,Math.PI/2,'Surface Y');
   const mesh={positions:[],bones:[],weights:[],indices:[],colors:[],materials:[],basis:[1,x,y],groups:[]},palette=new Map();
-  const tint=(rgb,shade)=>{const c=rgb.map(n=>Math.round(Math.max(0,Math.min(255,n*shade)))),key=c.join();if(!palette.has(key)){palette.set(key,mesh.colors.length);mesh.colors.push(c);}return palette.get(key);};
+  const tint=(rgb,level)=>{const f=.6+.42*level,cool=(1-level)*.14,c=rgb.map((n,i)=>Math.round(Math.max(0,Math.min(255,n*f*(1-cool)+[52,62,96][i]*cool)))),key=c.join();if(!palette.has(key)){palette.set(key,mesh.colors.length);mesh.colors.push(c);}return palette.get(key);};
   const vertex=(p,role)=>{const index=mesh.positions.length/3;mesh.positions.push(...p);mesh.bones.push(roles.get(role),0,0,0);mesh.weights.push(1,0,0,0);return index;};
-  const triangle=(a,b,c,center,color)=>{
-    const p=i=>mesh.positions.slice(i*3,i*3+3),A=p(a),B=p(b),C=p(c),u=B.map((n,i)=>n-A[i]),v=C.map((n,i)=>n-A[i]),normal=[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]],norm=Math.hypot(...normal);if(norm<1e-8)return;
-    const d=normal.reduce((sum,n,i)=>sum+n*((A[i]+B[i]+C[i])/3-center[i]),0);if(d<0){[b,c]=[c,b];for(let i=0;i<3;i++)normal[i]*=-1;}
-    // Bounded baked palette shading gives a clear silhouette without a new light pipeline.
-    const light=(normal[0]*-.3+normal[1]*-.5+normal[2]*.8)/norm,shade=Math.round((.82+.16*Math.max(-.7,light))*12)/12;
-    mesh.indices.push(a,b,c);mesh.materials.push(tint(color,shade));
+  const p=i=>mesh.positions.slice(i*3,i*3+3),cross=(u,v)=>[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]];
+  // `shared` is the whole quad's normal, so both of its triangles get one shading level (no checkerboard).
+  const triangle=(a,b,c,center,color,shared)=>{
+    const A=p(a),B=p(b),C=p(c),own=cross(B.map((n,i)=>n-A[i]),C.map((n,i)=>n-A[i]));if(Math.hypot(...own)<1e-8)return;
+    const outward=own.reduce((sum,n,i)=>sum+n*((A[i]+B[i]+C[i])/3-center[i]),0)>=0;if(!outward)[b,c]=[c,b];
+    let normal=shared&&Math.hypot(...shared)>1e-8?shared:own;if(normal.reduce((sum,n,i)=>sum+n*((A[i]+B[i]+C[i])/3-center[i]),0)<0)normal=normal.map(n=>-n);const norm=Math.hypot(...normal);
+    // Bounded baked palette shading: a soft wrapped key light with cooler, richer shadows.
+    // Few, shared levels keep eight-actor scenes inside the native palette limit.
+    const light=(normal[0]*-.35+normal[1]*-.55+normal[2]*.76)/norm,wrap=Math.max(0,(light+.45)/1.45),steps=color.levels??12,level=shading?Math.round(wrap**1.15*steps)/steps:.86;
+    mesh.indices.push(a,b,c);mesh.materials.push(tint(color,level));
   };
   const surface=(role,center,color,point,rows=12,columns=20,label=role)=>{
     const start=mesh.indices.length/3,base=mesh.positions.length/3;
     for(let i=0;i<=rows;i++)for(let j=0;j<=columns;j++)vertex(point(i/rows,j/columns),role);
-    for(let i=0;i<rows;i++)for(let j=0;j<columns;j++){const a=base+i*(columns+1)+j,b=a+1,c=a+columns+1,d=c+1;triangle(a,c,b,center,color);triangle(b,c,d,center,color);}
+    for(let i=0;i<rows;i++)for(let j=0;j<columns;j++){const a=base+i*(columns+1)+j,b=a+1,c=a+columns+1,d=c+1,A=p(a),B=p(b),C=p(c),D=p(d),quad=cross(D.map((n,k)=>n-A[k]),C.map((n,k)=>n-B[k]));triangle(a,c,b,center,color,quad);triangle(b,c,d,center,color,quad);}
     mesh.groups.push({name:label,start,count:mesh.indices.length/3-start});
   };
   const ellipsoid=(role,center,radius,color,label=role,rows=12,columns=20)=>surface(role,center,color,(u,v)=>{const a=u*Math.PI,b=v*Math.PI*2;return[center[0]+radius[0]*Math.sin(a)*Math.cos(b),center[1]-radius[1]*Math.cos(a),center[2]+radius[2]*Math.sin(a)*Math.sin(b)];},rows,columns,label);
-  const capsule=(role,radius,color)=>{const spec=specs.find(s=>s[0]===role),a=spec[2],b=spec[3],center=a.map((n,i)=>(n+b[i])/2);
-    surface(role,center,color,(u,v)=>{const phi=u*Math.PI,theta=v*Math.PI*2,cy=u<.5?a[1]:b[1];return[center[0]+Math.sin(phi)*Math.cos(theta)*radius,cy-Math.cos(phi)*radius,Math.sin(phi)*Math.sin(theta)*radius];},14,18,role);
+  // A tapered capsule along a vertical bone: round ends, smooth narrowing toward the tip.
+  const limb=(role,top,bottom,color,label=role)=>{const spec=specs.find(s=>s[0]===role),a=spec[2],b=spec[3],center=a.map((n,i)=>(n+b[i])/2);
+    surface(role,center,color,(u,v)=>{const phi=u*Math.PI,theta=v*Math.PI*2,upper=u<.5,r=upper?top:bottom,cy=upper?a[1]:b[1];return[center[0]+Math.sin(phi)*Math.cos(theta)*r,cy-Math.cos(phi)*r,center[2]+Math.sin(phi)*Math.sin(theta)*r];},12,16,label);
   };
-  ellipsoid('spine0',[0,-30,0],[29,45,18],colors.shirt,'Shirt');ellipsoid('model',[0,1,0],[27,18,17],colors.pants,'Hips');
-  ellipsoid('spine0',[-11,-37,17],[7,8,2],colors.shirt.map(n=>Math.min(255,n+24)),'Front pocket',8,14);
-  ellipsoid('spine0',[0,-40,-17],[20,1.5,2],colors.shirt.map(n=>Math.round(n*.78)),'Back seam',6,16);
-  for(const side of ['left','right']){const sx=side==='left'?1:-1;capsule(`${side}Thigh`,13,colors.pants);capsule(`${side}Shin`,11.5,colors.pants);
-    ellipsoid(`${side}Foot`,[sx*15,111,13],[14,10,24],colors.shoes,`${side} shoe`);
-    capsule(`${side}UpperArm`,11.5,colors.shirt);capsule(`${side}Forearm`,9.5,colors.skin);ellipsoid(`${side}Forearm`,[sx*30,14,0],[11,12,10],colors.skin,`${side} hand`);
+  // A surface of revolution with a rounded-square section, closed at both ends.
+  const lathe=(role,ys,profile,color,label,rows=26,columns=28,power=2.6)=>{const center=[0,(ys[0]+ys[1])/2,0];
+    surface(role,center,color,(u,v)=>{const [rx,rz,dz=0]=profile(u),theta=v*Math.PI*2,c=Math.cos(theta),s=Math.sin(theta),e=2/power;return[rx*Math.sign(c)*Math.abs(c)**e,ys[0]+(ys[1]-ys[0])*u,dz+rz*Math.sign(s)*Math.abs(s)**e];},rows,columns,label);
+  };
+  const smooth=(keys,u)=>{let i=0;while(i<keys.length-2&&u>keys[i+1][0])i++;const [u0,...a]=keys[i],[u1,...b]=keys[i+1],t=Math.max(0,Math.min(1,(u-u0)/(u1-u0))),k=t*t*(3-2*t);return a.map((n,j)=>n+(b[j]-n)*k);};
+  // Small details use fewer shading levels; they are too small to show more.
+  const detail=rgb=>Object.assign([...rgb],{levels:2});
+  const shade=(rgb,f)=>rgb.map(n=>Math.round(Math.max(0,Math.min(255,n*f))));
+  const blend=(a,b,t)=>a.map((n,i)=>Math.round(n+(b[i]-n)*t));
+  // Torso: broad rounded shoulders, a slightly narrower waist, closed at the neck and hips.
+  const torso=[[0,0,0,0],[.05,15,11,0],[.14,26,16,0],[.3,27,17.5,.5],[.55,24.5,17,.5],[.82,21.5,15,0],[1,13,9,0]];
+  lathe('spine0',[-80,-4],u=>smooth(torso,u),colors.shirt,'Shirt',22,28,2.25);
+  ellipsoid('spine0',[0,-78,0],[13,4.5,10],detail(shade(colors.shirt,.82)),'Collar',6,20);
+  ellipsoid('spine0',[-12,-47,16.6],[6,5.2,1.2],detail(shade(colors.shirt,.86)),'Front pocket',6,12);
+  ellipsoid('spine0',[0,-44,-16.6],[15,1.1,1.3],detail(shade(colors.shirt,.8)),'Back seam',4,14);
+  ellipsoid('model',[0,0,0],[22.5,15.5,14.6],colors.pants,'Hips');
+  ellipsoid('model',[0,-9,0],[22.6,3.4,15.6],detail(shade(colors.pants,.55)),'Belt',6,24);
+  ellipsoid('model',[0,-9,15.2],[4.2,3.2,1.4],detail([216,184,112]),'Buckle',6,10);
+  const sole=detail(blend(colors.shoes,[236,230,220],.4));
+  for(const side of ['left','right']){const sx=side==='left'?1:-1;
+    limb(`${side}Thigh`,12,10.5,colors.pants);limb(`${side}Shin`,10.2,8.8,colors.pants);
+    ellipsoid(`${side}Shin`,[sx*15,98,0],[9.6,3,9.6],detail(shade(colors.pants,.82)),`${side} cuff`,5,16);
+    ellipsoid(`${side}Foot`,[sx*15,109,10],[11.5,9,19],colors.shoes,`${side} shoe`,12,20);
+    ellipsoid(`${side}Foot`,[sx*15,107,25],[9,6.5,6],detail(blend(colors.shoes,[255,255,255],.14)),`${side} toe`,8,14);
+    ellipsoid(`${side}Foot`,[sx*15,118.5,10.5],[9.6,2.5,16.6],sole,`${side} sole`,8,22);
+    ellipsoid(`${side}UpperArm`,[sx*28.5,-62,0],[10.5,10,10.5],colors.shirt,`${side} shoulder`,10,16);
+    limb(`${side}UpperArm`,9.2,8.6,colors.shirt,`${side} sleeve`);
+    limb(`${side}Forearm`,6.8,6,colors.skin,`${side} forearm`);
+    ellipsoid(`${side}Forearm`,[sx*30,17,1],[7.2,9.5,6.4],colors.skin,`${side} hand`,10,16);
+    ellipsoid(`${side}Forearm`,[sx*25.6,12,5],[3,5,3],colors.skin,`${side} thumb`,6,10);
   }
-  ellipsoid('head',[0,-69,0],[10,12,10],colors.skin,'Neck');ellipsoid('head',[0,-97,0],[30,32,26],colors.skin,'Head');
-  for(const sx of [-1,1])ellipsoid('head',[sx*29,-96,0],[7,9,7],colors.skin,'Ear',8,14);
-  surface('head',[0,-97,0],colors.hair,(u,v)=>{const theta=v*Math.PI*2,max=2.28-1.02*Math.max(0,Math.sin(theta)),phi=u*max;return[31*Math.sin(phi)*Math.cos(theta),-97-34*Math.cos(phi),28*Math.sin(phi)*Math.sin(theta)];},12,24,'Hair');
-  for(const sx of [-1,1]){ellipsoid('head',[sx*10,-99,24],[5.7,7.2,3.5],[255,250,238],'Eye white',8,14);ellipsoid('head',[sx*10+1,-99,27.4],[2.8,4.2,1.5],colors.iris,'Iris',8,12);ellipsoid('head',[sx*10+1.6,-100,28.8],[.9,1.2,.7],[255,255,255],'Eye glint',6,10);
-    ellipsoid('head',[sx*10,-109,25.5],[6,1.7,2],colors.hair,'Brow',6,12);
+  ellipsoid('head',[0,-76,0],[8,9,8],colors.skin,'Neck',8,14);
+  const head=[0,-108,1],hr=[35,34,32];
+  // Points on the face follow the head's ellipsoid so features sit on its surface.
+  const onFace=(x,y,lift=0)=>[x,y,head[2]+hr[2]*Math.sqrt(Math.max(0,1-((x-head[0])/hr[0])**2-((y-head[1])/hr[1])**2))+lift];
+  ellipsoid('head',head,hr,colors.skin,'Head',16,28);
+  for(const sx of [-1,1]){ellipsoid('head',[sx*34,-104,0],[4.5,8,6],colors.skin,'Ear',8,12);ellipsoid('head',[sx*35.5,-104,0],[2,5,3.5],detail(shade(colors.skin,.82)),'Ear',6,10);}
+  // Hair cap: a forehead hairline in front, above the ears at the sides, down to the nape behind.
+  surface('head',head,colors.hair,(u,v)=>{const theta=v*Math.PI*2,front=Math.sin(theta),side=Math.cos(theta)**2,max=front>0?1.5-.48*front+.06*Math.sin(theta*7)*front:1.5-.62*front,phi=u*(max-.12*side*Math.max(0,front)),grow=1.05+.06*Math.cos(phi*.9)**2;
+    return[head[0]+hr[0]*grow*Math.sin(phi)*Math.cos(theta),head[1]-hr[1]*1.07*Math.cos(phi)-2,head[2]+hr[2]*grow*Math.sin(phi)*Math.sin(theta)];},16,32,'Hair');
+  ellipsoid('head',[-8,-136,16],[19,8,13],colors.hair,'Fringe',8,16);
+  const lift=(x,y,n)=>onFace(x,y,n);
+  for(const sx of [-1,1]){
+    const eye=lift(sx*12.5,-106,-2.4);
+    ellipsoid('head',eye,[7.4,9.6,3.6],detail([255,252,246]),'Eye white',10,16);
+    ellipsoid('head',[eye[0]+sx*.4,eye[1]+.6,eye[2]+2.3],[5.2,6.6,1.6],detail(colors.iris),'Iris',8,14);
+    ellipsoid('head',[eye[0]+sx*.4,eye[1]+.8,eye[2]+3.4],[2.9,3.8,1.1],detail([28,30,36]),'Pupil',8,12);
+    ellipsoid('head',[eye[0]+sx*.4+1.8,eye[1]-2.6,eye[2]+4.3],[1.5,1.8,.7],detail([255,255,255]),'Eye glint',6,10);
+    ellipsoid('head',lift(sx*13,-119.5,.6),[7.2,1.8,1.6],detail(shade(colors.hair,.9)),'Brow',6,12);
+    ellipsoid('head',lift(sx*21,-95,-.9),[6,3.4,1.2],detail(blend(colors.skin,[240,120,120],.32)),'Cheek',6,12);
   }
-  ellipsoid('head',[0,-92,28],[3.6,4,4],colors.skin,'Nose',8,14);
-  ellipsoid('head',[0,-84,24],[expression==='neutral'?5:8,expression==='happy'?4:1.4,2],[128,65,60],'Mouth',8,14);
-  if(expression==='happy')ellipsoid('head',[0,-85.3,25.5],[5,1.1,.8],[255,248,230],'Smile',6,12);
+  ellipsoid('head',lift(0,-98,.4),[3.4,3,3.2],shade(colors.skin,.94),'Nose',8,12);
+  // The mouth is a short tube on the face: a curve up for happy, flat for neutral, down for sad.
+  const curve=expression==='happy'?-3.4:expression==='sad'?2.6:0,half=expression==='neutral'?5:7.5;
+  surface('head',onFace(0,-88),detail([150,72,66]),(u,v)=>{const x=(v*2-1)*half,y=-88+curve*(x/half)**2,c=onFace(x,y),a=u*Math.PI*2;return[c[0],y+1.4*Math.cos(a),c[2]-.6+1.4*Math.sin(a)];},6,14,'Mouth');
+  if(expression==='happy')ellipsoid('head',lift(0,-86.4,-.8),[4.2,1.8,1],detail([255,248,236]),'Smile',6,12);
   figure._styk.spatialMesh=mesh;figure.segment_count=figure.segments.length;return {figure,rig:characterRig(figure)};
 }
 
